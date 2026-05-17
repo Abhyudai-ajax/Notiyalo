@@ -1,4 +1,8 @@
 const { useState } = React;
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://127.0.0.1:8000'
+    : 'https://notiyalo.onrender.com';
+
 
 function Sidebar() {
 
@@ -81,7 +85,7 @@ function NoteEditor({ currentNote, setCurrentNote }) {
         try {
 
             const response = await fetch(
-                'https://notiyalo-production.up.railway.app/api/notes/create/',
+                `${API_BASE_URL}/api/notes/create/`,
                 {
                     method: 'POST',
 
@@ -237,7 +241,7 @@ function AIPanel({ currentNote }) {
         try {
 
             const response = await fetch(
-                'https://notiyalo-production.up.railway.app/api/ai/summary/',
+                `${API_BASE_URL}/api/ai/summary/`,
                 {
                     method: 'POST',
 
