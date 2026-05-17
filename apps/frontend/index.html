@@ -26,6 +26,10 @@
     <script type="text/babel">
 
         const { useState, useEffect } = React;
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:8000'
+            : 'https://notiyalo-production.up.railway.app';
+
         function AuthPage({ setIsLoggedIn }) {
 
             const [isLogin, setIsLogin] = React.useState(true)
@@ -42,9 +46,9 @@
 
                     const url = isLogin
 
-                        ? "http://127.0.0.1:8000/api/auth/login/"
+                        ? `${API_BASE_URL}/api/auth/login/`
 
-                        : "http://127.0.0.1:8000/api/auth/signup/"
+                        : `${API_BASE_URL}/api/auth/signup/`
 
                     const body = isLogin
 
@@ -396,7 +400,7 @@
 
                     const response = await fetch(
 
-                        "http://127.0.0.1:8000/api/notes/",
+                        `${API_BASE_URL}/api/notes/`,
 
                         {
 
@@ -479,7 +483,7 @@
                 try {
 
                     await fetch(
-                        'http://127.0.0.1:8000/api/notes/create/',
+                        `${API_BASE_URL}/api/notes/create/`,
                         {
                             method: 'POST',
 
@@ -623,7 +627,7 @@
                     setLoading(true);
 
                     const response = await fetch(
-                        'http://127.0.0.1:8000/api/ai/summary/',
+                        `${API_BASE_URL}/api/ai/summary/`,
                         {
                             method: 'POST',
 
@@ -819,7 +823,7 @@
 
                     const response = await fetch(
 
-                        "http://127.0.0.1:8000/api/notes/",
+                        `${API_BASE_URL}/api/notes/`,
 
                         {
 
@@ -871,7 +875,7 @@
 
                     const response = await fetch(
 
-                        'http://127.0.0.1:8000/api/ai/summary/',
+                        `${API_BASE_URL}/api/ai/summary/`,
 
                         {
 
@@ -935,7 +939,7 @@
 
                     const response = await fetch(
 
-                        `http://127.0.0.1:8000/api/notes/${selectedNote.id}/`,
+                        `${API_BASE_URL}/api/notes/update/${selectedNote.id}/`,
 
                         {
 
@@ -981,7 +985,7 @@
 
                     await fetch(
 
-                        `http://127.0.0.1:8000/api/notes/${id}/`,
+                        `${API_BASE_URL}/api/notes/delete/${id}/`,
 
                         {
 
@@ -1494,7 +1498,7 @@
                 try {
 
                     const response = await fetch(
-                        'http://127.0.0.1:8000/api/ai/chat/',
+                        `${API_BASE_URL}/api/ai/chat/`,
                         {
                             method: 'POST',
 
