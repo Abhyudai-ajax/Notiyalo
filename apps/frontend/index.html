@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Notiyalo AI Workspace</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+</head>
+
+<body class="bg-slate-950">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+
+        const { useState, useEffect } = React;
+        function AuthPage({ setIsLoggedIn }) {
+
+            const [isLogin, setIsLogin] = React.useState(true)
+
+            const [username, setUsername] = React.useState("")
+
+            const [email, setEmail] = React.useState("")
+
+            const [password, setPassword] = React.useState("")
+
+            async function handleAuth() {
+
+                try {
+
+                    const url = isLogin
+
+                        ? "http://127.0.0.1:8000/api/auth/login/"
+
+                        : "http://127.0.0.1:8000/api/auth/signup/"
+
+                    const body = isLogin
+
+                        ? {
+
+                            username: username,
+
+                            password: password
+                        }
+
+                        : {
+
+                            username: username,
+
+                            email: email,
+
+                            password: password
+                        }
+
+                    const response = await fetch(url, {
+
+                        method: "POST",
+
+                        headers: {
+
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(body)
+                    })
+
+                    const data = await response.json()
+
+                    console.log(data)
+
+                    if (data.token) {
+
+                        localStorage.setItem(
+                            "token",
+                            data.token
+                        )
+
+                        setIsLoggedIn(true)
+
+                        window.location.href = "/"
+                    }
+
+                    else {
+
+                        alert(
+                            data.error || "Authentication failed"
+                        )
+                    }
+
+                }
+
+                catch (error) {
+
+                    console.log(error)
+
+                    alert("Server error")
+                }
+            }
+
+            return (
+
+                <div className="
+            min-h-screen
+            flex
+            items-center
+            justify-center
+            bg-slate-950
+        ">
+
+                    <div className="
+                bg-slate-900
+                p-10
+                rounded-3xl
+                w-full
+                max-w-xl
+                border
+                border-slate-800
+            ">
+
+                        <h1 className="
+                    text-5xl
+                    font-black
+                    mb-8
+                    text-blue-500
+                ">
+                            Notiyalo
+                        </h1>
+
+                        <h2 className="
+                    text-3xl
+                    font-bold
+                    mb-8
+                ">
+                            {
+                                isLogin
+                                    ? "Login"
+                                    : "Create Account"
+                            }
+                        </h2>
+
+                        <div className="space-y-5">
+
+                            <input
+                                placeholder="Username"
+
+                                value={username}
+
+                                onChange={(e) =>
+                                    setUsername(e.target.value)
+                                }
+
+                                className="
+                            w-full
+                            p-5
+                            rounded-2xl
+                            bg-slate-800
+                            outline-none
+                        "
+                            />
+
+                            {
+                                !isLogin && (
+
+                                    <input
+                                        placeholder="Email"
+
+                                        value={email}
+
+                                        onChange={(e) =>
+                                            setEmail(e.target.value)
+                                        }
+
+                                        className="
+                                    w-full
+                                    p-5
+                                    rounded-2xl
+                                    bg-slate-800
+                                    outline-none
+                                "
+                                    />
+                                )
+                            }
+
+                            <input
+                                type="password"
+
+                                placeholder="Password"
+
+                                value={password}
+
+                                onChange={(e) =>
+                                    setPassword(e.target.value)
+                                }
+
+                                className="
+                            w-full
+                            p-5
+                            rounded-2xl
+                            bg-slate-800
+                            outline-none
+                        "
+                            />
+
+                            <button
+                                onClick={handleAuth}
+
+                                className="
+                            w-full
+                            bg-blue-600
+                            hover:bg-blue-700
+                            transition
+                            p-5
+                            rounded-2xl
+                            font-bold
+                            text-xl
+                        "
+                            >
+                                {
+                                    isLogin
+                                        ? "Login"
+                                        : "Signup"
+                                }
+                            </button>
+
+                            <button
+                                onClick={() =>
+                                    setIsLogin(!isLogin)
+                                }
+
+                                className="
+                            text-blue-400
+                            mt-4
+                        "
+                            >
+                                {
+                                    isLogin
+
+                                        ? "Create new account"
+
+                                        : "Already have account?"
+                                }
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            )
+        }
+        function Header() {
+
+            return (
+
+                <div className="
+            flex
+            justify-between
+            items-center
+            mb-10
+        ">
+
+                    <div>
+
+                        <h1 className="
+                    text-5xl
+                    font-black
+                    text-white
+                ">
+                            AI Notes Workspace
+                        </h1>
+
+                        <p className="
+                    text-slate-400
+                    mt-3
+                    text-lg
+                ">
+                            Collaborative productivity powered by AI
+                        </p>
+
+                    </div>
+
+                    <div className="relative">
+
+                        <button
+
+                            onClick={() => {
+
+                                const menu = document.getElementById("accountMenu")
+
+                                menu.classList.toggle("hidden")
+                            }}
+
+                            className="
+                        w-14
+                        h-14
+                        rounded-full
+                        bg-slate-800
+                        hover:bg-slate-700
+                        transition
+                        flex
+                        items-center
+                        justify-center
+                        text-2xl
+                    "
+                        >
+                            👤
+                        </button>
+
+                        <div
+
+                            id="accountMenu"
+
+                            className="
+                        hidden
+                        absolute
+                        right-0
+                        top-20
+                        w-72
+                        bg-slate-900
+                        border
+                        border-slate-800
+                        rounded-3xl
+                        p-6
+                        shadow-2xl
+                        z-50
+                    "
+                        >
+
+                            <h2 className="
+                        text-2xl
+                        font-bold
+                        mb-4
+                    ">
+                                Account
+                            </h2>
+
+                            <p className="
+                        text-slate-400
+                        mb-6
+                    ">
+                                Logged in successfully
+                            </p>
+
+                            <button
+
+                                onClick={() => {
+
+                                    localStorage.removeItem("token")
+
+                                    window.location.reload()
+                                }}
+
+                                className="
+                            w-full
+                            bg-red-600
+                            hover:bg-red-700
+                            transition
+                            p-4
+                            rounded-2xl
+                            font-bold
+                        "
+                            >
+                                Logout
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            );
+        }
+
+        function Dashboard({ currentNote, setCurrentNote }) {
+            const [notes, setNotes] = useState([]);
+            useEffect(() => {
+
+                fetchNotes();
+
+            }, []);
+            async function fetchNotes() {
+
+                try {
+
+                    const response = await fetch(
+
+                        "http://127.0.0.1:8000/api/notes/",
+
+                        {
+
+                            headers: {
+
+                                "Authorization":
+                                    `Bearer ${localStorage.getItem("token")}`
+                            }
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (Array.isArray(data)) {
+
+                        setNotes(data);
+
+                    } else {
+
+                        setNotes([]);
+                    }
+
+                } catch (error) {
+
+                    console.log(error);
+                }
+            }
+
+            const [title, setTitle] = useState("");
+            <div className="grid grid-cols-4 gap-6 mt-10">
+
+                <div className="bg-slate-900 p-6 rounded-3xl">
+                    <h3 className="text-slate-400">
+                        Total Notes
+                    </h3>
+
+                    <p className="text-5xl font-bold mt-4">
+                        {notes.length}
+                    </p>
+                </div>
+
+                <div className="bg-slate-900 p-6 rounded-3xl">
+                    <h3 className="text-slate-400">
+                        AI Summaries
+                    </h3>
+
+                    <p className="text-5xl font-bold mt-4">
+                        {notes.length}
+                    </p>
+                </div>
+
+                <div className="bg-slate-900 p-6 rounded-3xl">
+                    <h3 className="text-slate-400">
+                        Recent Notes
+                    </h3>
+
+                    <p className="text-5xl font-bold mt-4">
+                        {notes.slice(0, 3).length}
+                    </p>
+                </div>
+
+                <div className="bg-slate-900 p-6 rounded-3xl">
+                    <h3 className="text-slate-400">
+                        Tags Used
+                    </h3>
+
+                    <p className="text-5xl font-bold mt-4">
+                        {
+                            [...new Set(
+                                notes.map(n => n.tags)
+                            )].length
+                        }
+                    </p>
+                </div>
+
+            </div>
+
+            async function saveNote() {
+
+                try {
+
+                    await fetch(
+                        'http://127.0.0.1:8000/api/notes/create/',
+                        {
+                            method: 'POST',
+
+                            headers: {
+
+                                'Content-Type': 'application/json',
+
+                                'Authorization':
+                                    `Bearer ${localStorage.getItem("token")}`
+                            },
+
+                            body: JSON.stringify({
+                                title: title,
+                                content: currentNote,
+                                tags: 'work,ai'
+                            })
+                        }
+                    );
+
+                    alert("Note Saved!");
+
+                    setTitle("");
+                    setCurrentNote("");
+
+                } catch (error) {
+
+                    console.log(error);
+
+                    alert("Error saving note");
+                }
+            }
+
+            return (
+
+                <div className="
+                    grid
+                    grid-cols-3
+                    gap-8
+                ">
+
+                    <div className="col-span-2">
+
+                        <div className="
+                            bg-slate-900
+                            rounded-3xl
+                            border
+                            border-slate-800
+                            p-6
+                        ">
+
+                            <h2 className="
+                                text-3xl
+                                font-bold
+                                text-white
+                                mb-6
+                            ">
+                                Smart Note Editor
+                            </h2>
+
+                            <input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Note Title"
+                                className="
+                                    w-full
+                                    bg-slate-800
+                                    rounded-2xl
+                                    p-4
+                                    outline-none
+                                    text-white
+                                    mb-4
+                                "
+                            />
+
+                            <textarea
+                                value={currentNote}
+
+                                onChange={(e) =>
+                                    setCurrentNote(e.target.value)
+                                }
+
+                                placeholder="Write your thoughts..."
+
+                                className="
+                                    w-full
+                                    h-80
+                                    bg-slate-800
+                                    rounded-2xl
+                                    p-5
+                                    resize-none
+                                    outline-none
+                                    text-white
+                                    text-lg
+                                "
+                            />
+
+                            <button
+                                onClick={saveNote}
+                                className="
+                                    mt-6
+                                    bg-blue-600
+                                    hover:bg-blue-500
+                                    transition
+                                    px-6
+                                    py-4
+                                    rounded-2xl
+                                    w-full
+                                    font-bold
+                                    text-lg
+                                    text-white
+                                "
+                            >
+                                Save Note
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <AIPanel currentNote={currentNote} />
+
+                    </div>
+
+                </div>
+
+            );
+        }
+
+        function AIPanel({ currentNote }) {
+
+            const [summary, setSummary] = useState(null);
+
+            const [loading, setLoading] = useState(false);
+
+            async function generateAI() {
+
+                try {
+
+                    setLoading(true);
+
+                    const response = await fetch(
+                        'http://127.0.0.1:8000/api/ai/summary/',
+                        {
+                            method: 'POST',
+
+                            headers: {
+
+                                'Content-Type': 'application/json',
+
+                                'Authorization':
+                                    `Bearer ${localStorage.getItem("token")}`
+                            },
+
+                            body: JSON.stringify({
+                                content: currentNote
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    setSummary(data);
+
+                    setLoading(false);
+
+                } catch (error) {
+
+                    console.log(error);
+
+                    setLoading(false);
+                }
+            }
+
+            return (
+
+                <div className="
+                    bg-slate-900
+                    rounded-3xl
+                    border
+                    border-slate-800
+                    p-6
+                ">
+
+                    <h2 className="
+                        text-3xl
+                        font-bold
+                        text-white
+                        mb-6
+                    ">
+                        AI Insights
+                    </h2>
+
+                    <div className="
+                        bg-slate-800
+                        rounded-2xl
+                        p-5
+                        min-h-[300px]
+                    ">
+
+                        <h3 className="
+                            text-blue-400
+                            font-bold
+                            text-xl
+                            mb-6
+                        ">
+                            AI Summary
+                        </h3>
+
+                        {
+
+                            summary && (
+
+                                <div>
+
+                                    <h2 className="
+                                        text-2xl
+                                        font-bold
+                                        text-cyan-400
+                                        mb-4
+                                    ">
+                                        Summary
+                                    </h2>
+
+                                    <p className="
+                                        text-lg
+                                        text-slate-300
+                                        mb-8
+                                        leading-8
+                                    ">
+                                        {summary.summary}
+                                    </p>
+
+                                    <h2 className="
+                                        text-2xl
+                                        font-bold
+                                        text-emerald-400
+                                        mb-4
+                                    ">
+                                        Key Insights
+                                    </h2>
+
+                                    <ul className="
+                                        text-lg
+                                        text-slate-300
+                                        mb-8
+                                        list-disc
+                                        pl-6
+                                        space-y-3
+                                    ">
+
+                                        {summary.insights?.map((item, index) => (
+
+                                            <li key={index}>
+                                                {item}
+                                            </li>
+
+                                        ))}
+
+                                    </ul>
+
+                                    <h2 className="
+                                        text-2xl
+                                        font-bold
+                                        text-pink-400
+                                        mb-4
+                                    ">
+                                        Suggested Title
+                                    </h2>
+
+                                    <p className="
+                                        text-xl
+                                        font-semibold
+                                        text-white
+                                    ">
+                                        {summary.title}
+                                    </p>
+
+                                </div>
+                            )
+                        }
+
+                    </div>
+
+                    <button
+                        onClick={generateAI}
+
+                        disabled={loading}
+
+                        className="
+                            mt-6
+                            bg-emerald-600
+                            hover:bg-emerald-500
+                            transition
+                            px-6
+                            py-4
+                            rounded-2xl
+                            w-full
+                            font-bold
+                            text-lg
+                            text-white
+                            disabled:opacity-50
+                        "
+                    >
+                        {loading ? "Generating..." : "Generate AI Summary"}
+                    </button>
+
+                </div>
+
+            );
+        }
+
+        function NotesManager() {
+
+            const [notes, setNotes] = useState([]);
+
+            const [selectedNote, setSelectedNote] = useState(null);
+
+            const [summary, setSummary] = useState(null);
+
+            const [loading, setLoading] = useState(false);
+
+            const [showSummary, setShowSummary] = useState(false);
+
+            const [search, setSearch] = useState("");
+
+            useEffect(() => {
+
+                fetchNotes();
+
+            }, []);
+
+            async function fetchNotes() {
+
+                try {
+
+                    const response = await fetch(
+
+                        "http://127.0.0.1:8000/api/notes/",
+
+                        {
+
+                            headers: {
+
+                                "Authorization":
+                                    `Bearer ${localStorage.getItem("token")}`
+                            }
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    console.log(data);
+
+                    if (Array.isArray(data)) {
+
+                        setNotes(data);
+
+                    } else {
+
+                        setNotes([]);
+                    }
+
+                } catch (error) {
+
+                    console.log(error);
+
+                    setNotes([]);
+                }
+            }
+
+            async function generateSummary(content) {
+
+                if (!content || content.trim() === "") {
+
+                    setSummary(null);
+
+                    setShowSummary(false);
+
+                    return;
+                }
+
+                try {
+
+                    setLoading(true);
+
+                    setShowSummary(true);
+
+                    const response = await fetch(
+
+                        'http://127.0.0.1:8000/api/ai/summary/',
+
+                        {
+
+                            method: 'POST',
+
+                            headers: {
+
+                                'Content-Type': 'application/json',
+
+                                'Authorization':
+                                    `Bearer ${localStorage.getItem("token")}`
+                            },
+
+                            body: JSON.stringify({
+
+                                content: content
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    setSummary(data);
+
+                    setLoading(false);
+
+                } catch (error) {
+
+                    console.log(error);
+
+                    setLoading(false);
+                }
+            }
+
+            function openNote(note) {
+
+                setSelectedNote(note);
+
+                setSummary(null);
+
+                setShowSummary(false);
+            }
+
+            function updateSelectedNote(key, value) {
+
+                setSelectedNote({
+
+                    ...selectedNote,
+
+                    [key]: value
+                });
+            }
+
+            async function saveEditedNote() {
+
+                if (!selectedNote) return;
+
+                try {
+
+                    const token = localStorage.getItem("token");
+
+                    const response = await fetch(
+
+                        `http://127.0.0.1:8000/api/notes/${selectedNote.id}/`,
+
+                        {
+
+                            method: "PATCH",
+
+                            headers: {
+
+                                "Content-Type": "application/json",
+
+                                "Authorization":
+                                    `Bearer ${token}`
+                            },
+
+                            body: JSON.stringify({
+
+                                title: selectedNote.title,
+
+                                content: selectedNote.content,
+
+                                tags: selectedNote.tags
+                            })
+                        }
+                    );
+
+                    if (response.ok) {
+
+                        fetchNotes();
+
+                    } else {
+
+                        alert("Failed to save changes");
+                    }
+
+                } catch (error) {
+
+                    console.log(error);
+                }
+            }
+
+            async function deleteNote(id) {
+
+                try {
+
+                    await fetch(
+
+                        `http://127.0.0.1:8000/api/notes/${id}/`,
+
+                        {
+
+                            method: 'DELETE',
+
+                            headers: {
+
+                                'Authorization':
+                                    `Bearer ${localStorage.getItem("token")}`
+                            }
+                        }
+                    );
+
+                    fetchNotes();
+
+                    setSelectedNote(null);
+
+                    setSummary(null);
+
+                    setShowSummary(false);
+
+                } catch (error) {
+
+                    console.log(error);
+                }
+            }
+
+            const filteredNotes = notes.filter(note =>
+
+                note.title?.toLowerCase().includes(
+                    search.toLowerCase()
+                )
+
+                ||
+
+                note.content?.toLowerCase().includes(
+                    search.toLowerCase()
+                )
+
+                ||
+
+                note.tags?.toLowerCase().includes(
+                    search.toLowerCase()
+                )
+            );
+
+            return (
+
+                <div className="mt-8">
+
+                    <div className="
+                flex
+                justify-between
+                items-center
+                mb-8
+            ">
+
+                        <h2 className="
+                    text-4xl
+                    font-bold
+                ">
+                            Saved Notes
+                        </h2>
+
+                        {
+                            !selectedNote && (
+
+                                <input
+
+                                    placeholder="Search notes..."
+
+                                    value={search}
+
+                                    onChange={(e) =>
+                                        setSearch(e.target.value)
+                                    }
+
+                                    className="
+                                w-[400px]
+                                p-4
+                                rounded-2xl
+                                bg-slate-800
+                                outline-none
+                            "
+                                />
+                            )
+                        }
+
+                    </div>
+
+                    {
+
+                        !selectedNote && (
+
+                            <div className="
+                        grid
+                        grid-cols-3
+                        gap-6
+                    ">
+
+                                {filteredNotes.map((note) => (
+
+                                    <div
+                                        key={note.id}
+
+                                        onClick={() => openNote(note)}
+
+                                        className="
+                                    bg-slate-900
+                                    border
+                                    border-slate-800
+                                    rounded-3xl
+                                    p-6
+                                    cursor-pointer
+                                    hover:border-blue-500
+                                    transition
+                                    h-[230px]
+                                    overflow-hidden
+                                "
+                                    >
+
+                                        <h3 className="
+                                    text-2xl
+                                    font-bold
+                                    mb-4
+                                ">
+                                            {note.title}
+                                        </h3>
+
+                                        <p className="
+                                    text-slate-400
+                                    leading-7
+                                    mb-4
+                                ">
+                                            {note.content?.slice(0, 140)}...
+                                        </p>
+
+                                        <p className="
+                                    text-blue-400
+                                ">
+                                            #{note.tags}
+                                        </p>
+
+                                    </div>
+
+                                ))}
+
+                            </div>
+                        )
+                    }
+
+                    {
+
+                        selectedNote && (
+
+                            <div>
+
+                                <button
+
+                                    onClick={() => {
+
+                                        setSelectedNote(null);
+
+                                        setSummary(null);
+
+                                        setShowSummary(false);
+                                    }}
+
+                                    className="
+                                mb-6
+                                bg-slate-800
+                                hover:bg-slate-700
+                                px-5
+                                py-3
+                                rounded-2xl
+                            "
+                                >
+                                    ← Back to Notes
+                                </button>
+
+                                <div className={`
+                            grid
+                            gap-8
+                            ${showSummary
+                                        ? 'grid-cols-5'
+                                        : 'grid-cols-1'}
+                        `}>
+
+                                    <div className={`
+                                bg-slate-900
+                                border
+                                border-slate-800
+                                rounded-3xl
+                                p-8
+                                ${showSummary
+                                            ? 'col-span-3'
+                                            : 'w-full'}
+                            `}>
+
+                                        <div className="
+                                    flex
+                                    justify-between
+                                    items-center
+                                    mb-6
+                                ">
+
+                                            <h2 className="
+                                        text-3xl
+                                        font-bold
+                                    ">
+                                                Edit Note
+                                            </h2>
+
+                                            <div className="
+                                        flex
+                                        gap-4
+                                    ">
+
+                                                <button
+
+                                                    onClick={() =>
+                                                        generateSummary(
+                                                            selectedNote.content
+                                                        )
+                                                    }
+
+                                                    className="
+                                                bg-cyan-600
+                                                hover:bg-cyan-500
+                                                px-5
+                                                py-3
+                                                rounded-2xl
+                                            "
+                                                >
+                                                    AI Summary
+                                                </button>
+
+                                                <button
+
+                                                    onClick={() =>
+                                                        deleteNote(selectedNote.id)
+                                                    }
+
+                                                    className="
+                                                bg-red-600
+                                                hover:bg-red-500
+                                                px-5
+                                                py-3
+                                                rounded-2xl
+                                            "
+                                                >
+                                                    Delete
+                                                </button>
+
+                                            </div>
+
+                                        </div>
+
+                                        <input
+
+                                            value={selectedNote.title}
+
+                                            onChange={(e) =>
+                                                updateSelectedNote(
+                                                    "title",
+                                                    e.target.value
+                                                )
+                                            }
+
+                                            className="
+                                        w-full
+                                        p-4
+                                        rounded-2xl
+                                        bg-slate-800
+                                        mb-4
+                                        text-2xl
+                                        font-bold
+                                    "
+                                        />
+
+                                        <input
+
+                                            placeholder="Tags"
+
+                                            value={selectedNote.tags || ""}
+
+                                            onChange={(e) =>
+                                                updateSelectedNote(
+                                                    "tags",
+                                                    e.target.value
+                                                )
+                                            }
+
+                                            className="
+                                        w-full
+                                        p-4
+                                        rounded-2xl
+                                        bg-slate-800
+                                        mb-4
+                                    "
+                                        />
+
+                                        <textarea
+
+                                            value={selectedNote.content}
+
+                                            onChange={(e) => {
+
+                                                updateSelectedNote(
+                                                    "content",
+                                                    e.target.value
+                                                );
+
+                                                clearTimeout(window.autoSave);
+
+                                                window.autoSave = setTimeout(() => {
+
+                                                    saveEditedNote();
+
+                                                }, 1200);
+
+                                                clearTimeout(window.aiTimer);
+
+                                                window.aiTimer = setTimeout(() => {
+
+                                                    if (e.target.value.trim()) {
+
+                                                        generateSummary(
+                                                            e.target.value
+                                                        );
+
+                                                    } else {
+
+                                                        setSummary(null);
+
+                                                        setShowSummary(false);
+                                                    }
+
+                                                }, 1200);
+                                            }}
+
+                                            className="
+                                        w-full
+                                        h-[550px]
+                                        bg-slate-800
+                                        rounded-2xl
+                                        p-5
+                                        resize-none
+                                        outline-none
+                                        text-lg
+                                        leading-8
+                                    "
+                                        />
+
+                                    </div>
+
+                                    {
+
+                                        showSummary && (
+
+                                            <div className="
+                                        col-span-2
+                                        bg-slate-900
+                                        border
+                                        border-slate-800
+                                        rounded-3xl
+                                        p-8
+                                        overflow-y-auto
+                                    ">
+
+                                                <h2 className="
+                                            text-3xl
+                                            font-bold
+                                            mb-8
+                                        ">
+                                                    AI Summary
+                                                </h2>
+
+                                                {
+
+                                                    !selectedNote.content?.trim()
+
+                                                        ? (
+
+                                                            <p className="
+                                                        text-slate-500
+                                                    ">
+                                                                No text detected.
+                                                            </p>
+                                                        )
+
+                                                        : loading
+
+                                                            ? (
+
+                                                                <p>
+                                                                    Generating summary...
+                                                                </p>
+                                                            )
+
+                                                            : (
+
+                                                                summary && (
+
+                                                                    <div>
+
+                                                                        <h3 className="
+                                                                    text-cyan-400
+                                                                    text-2xl
+                                                                    font-bold
+                                                                    mb-4
+                                                                ">
+                                                                            Summary
+                                                                        </h3>
+
+                                                                        <p className="
+                                                                    text-slate-300
+                                                                    leading-8
+                                                                    mb-8
+                                                                ">
+                                                                            {summary.summary}
+                                                                        </p>
+
+                                                                        <h3 className="
+                                                                    text-emerald-400
+                                                                    text-2xl
+                                                                    font-bold
+                                                                    mb-4
+                                                                ">
+                                                                            Key Insights
+                                                                        </h3>
+
+                                                                        <ul className="
+                                                                    list-disc
+                                                                    pl-6
+                                                                    space-y-3
+                                                                    mb-8
+                                                                ">
+
+                                                                            {
+                                                                                summary.insights?.map(
+
+                                                                                    (item, index) => (
+
+                                                                                        <li key={index}>
+                                                                                            {item}
+                                                                                        </li>
+                                                                                    )
+                                                                                )
+                                                                            }
+
+                                                                        </ul>
+
+                                                                        <h3 className="
+                                                                    text-pink-400
+                                                                    text-2xl
+                                                                    font-bold
+                                                                    mb-4
+                                                                ">
+                                                                            Suggested Title
+                                                                        </h3>
+
+                                                                        <p className="
+                                                                    text-xl
+                                                                    font-semibold
+                                                                ">
+                                                                            {summary.title}
+                                                                        </p>
+
+                                                                    </div>
+                                                                )
+                                                            )
+                                                }
+
+                                            </div>
+                                        )
+                                    }
+
+                                </div>
+
+                            </div>
+                        )
+                    }
+
+                </div>
+            );
+        }
+
+        function AIAssistant() {
+
+            const [question, setQuestion] = useState("");
+
+            const [messages, setMessages] = useState([]);
+
+            const [loading, setLoading] = useState(false);
+
+            async function askAI() {
+
+                if (!question.trim()) return;
+
+                const userMessage = {
+                    type: "user",
+                    text: question
+                };
+
+                setMessages(prev => [...prev, userMessage]);
+
+                setLoading(true);
+
+                try {
+
+                    const response = await fetch(
+                        'http://127.0.0.1:8000/api/ai/chat/',
+                        {
+                            method: 'POST',
+
+                            headers: {
+
+                                'Content-Type': 'application/json',
+
+                                'Authorization':
+                                    `Bearer ${localStorage.getItem("token")}`
+                            },
+
+                            body: JSON.stringify({
+                                question
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    const aiMessage = {
+                        type: "ai",
+                        text: data.answer
+                    };
+
+                    setMessages(prev => [...prev, aiMessage]);
+
+                    setQuestion("");
+
+                    setLoading(false);
+
+                } catch (error) {
+
+                    console.log(error);
+
+                    setLoading(false);
+                }
+            }
+
+            return (
+
+                <div className="
+            mt-8
+            bg-slate-900
+            border
+            border-slate-800
+            rounded-3xl
+            p-8
+            h-[80vh]
+            flex
+            flex-col
+        ">
+
+                    <h2 className="
+                text-4xl
+                font-bold
+                mb-8
+            ">
+                        AI Notes Assistant
+                    </h2>
+
+                    <div className="
+                flex-1
+                overflow-y-auto
+                space-y-6
+                mb-6
+            ">
+
+                        {messages.map((msg, index) => (
+
+                            <div
+                                key={index}
+
+                                className={`
+                            p-5
+                            rounded-2xl
+                            max-w-[80%]
+                            leading-8
+                            text-lg
+
+                            ${msg.type === 'user'
+                                        ? 'bg-blue-600 ml-auto'
+                                        : 'bg-slate-800'}
+                        `}
+                            >
+
+                                {msg.text}
+
+                            </div>
+
+                        ))}
+
+                        {
+
+                            loading && (
+
+                                <div className="
+                            bg-slate-800
+                            p-5
+                            rounded-2xl
+                            w-fit
+                        ">
+                                    AI is thinking...
+                                </div>
+                            )
+                        }
+
+                    </div>
+
+                    <div className="
+                flex
+                gap-4
+            ">
+
+                        <input
+                            value={question}
+
+                            onChange={(e) =>
+                                setQuestion(e.target.value)
+                            }
+
+                            placeholder="
+                    Ask anything about your notes...
+                    "
+
+                            className="
+                        flex-1
+                        bg-slate-800
+                        rounded-2xl
+                        p-5
+                        outline-none
+                        text-white
+                        text-lg
+                    "
+                        />
+
+                        <button
+                            onClick={askAI}
+
+                            className="
+                        bg-blue-600
+                        hover:bg-blue-500
+                        transition
+                        px-8
+                        rounded-2xl
+                        font-bold
+                    "
+                        >
+                            Send
+                        </button>
+
+                    </div>
+
+                </div>
+            );
+        }
+
+        function App() {
+
+            const [currentNote, setCurrentNote] = useState("")
+
+            const [isLoggedIn, setIsLoggedIn] = useState(
+
+                !!localStorage.getItem("token")
+            )
+
+            const token = localStorage.getItem("token")
+
+            const [activeSection, setActiveSection] = useState(
+
+                localStorage.getItem("activeSection") || "dashboard"
+            )
+
+            useEffect(() => {
+
+                localStorage.setItem(
+                    "activeSection",
+                    activeSection
+                )
+
+            }, [activeSection])
+
+            function changeSection(section) {
+
+                setActiveSection(section)
+
+                localStorage.setItem(
+                    "activeSection",
+                    section
+                )
+            }
+
+            if (!isLoggedIn || !token) {
+
+                return (
+
+                    <AuthPage
+                        setIsLoggedIn={setIsLoggedIn}
+                    />
+                )
+            }
+
+            return (
+
+                <div className="
+            flex
+            h-screen
+            text-white
+        ">
+
+                    <div className="
+                w-72
+                bg-slate-900
+                p-6
+                border-r
+                border-slate-800
+                flex
+                flex-col
+                gap-5
+            ">
+
+                        <h1 className="
+                    text-5xl
+                    font-black
+                    text-blue-500
+                    mb-8
+                ">
+                            Notiyalo
+                        </h1>
+
+                        <button
+
+                            onClick={() =>
+                                changeSection("dashboard")
+                            }
+
+                            className={`
+                        p-5
+                        rounded-2xl
+                        text-left
+                        font-semibold
+                        text-xl
+                        transition
+
+                        ${activeSection === "dashboard"
+
+                                    ? "bg-blue-600"
+
+                                    : "bg-slate-800 hover:bg-slate-700"
+                                }
+                    `}
+                        >
+                            Dashboard
+                        </button>
+
+                        <button
+
+                            onClick={() =>
+                                changeSection("notes")
+                            }
+
+                            className={`
+                        p-5
+                        rounded-2xl
+                        text-left
+                        font-semibold
+                        text-xl
+                        transition
+
+                        ${activeSection === "notes"
+
+                                    ? "bg-blue-600"
+
+                                    : "bg-slate-800 hover:bg-slate-700"
+                                }
+                    `}
+                        >
+                            Notes
+                        </button>
+
+                        <button
+
+                            onClick={() =>
+                                changeSection("ai")
+                            }
+
+                            className={`
+                        p-5
+                        rounded-2xl
+                        text-left
+                        font-semibold
+                        text-xl
+                        transition
+
+                        ${activeSection === "ai"
+
+                                    ? "bg-blue-600"
+
+                                    : "bg-slate-800 hover:bg-slate-700"
+                                }
+                    `}
+                        >
+                            AI Assistant
+                        </button>
+
+                    </div>
+
+                    <div className="
+                flex-1
+                p-10
+                overflow-y-auto
+            ">
+
+                        <Header />
+
+                        {
+
+                            activeSection === "dashboard" && (
+
+                                <Dashboard
+
+                                    currentNote={currentNote}
+
+                                    setCurrentNote={setCurrentNote}
+                                />
+                            )
+                        }
+
+                        {
+
+                            activeSection === "notes" && (
+
+                                <NotesManager />
+                            )
+                        }
+
+                        {
+
+                            activeSection === "ai" && (
+
+                                <AIAssistant />
+                            )
+                        }
+
+                    </div>
+
+                </div>
+            )
+        }
+
+        ReactDOM.createRoot(
+            document.getElementById("root")
+        ).render(<App />);
+
+    </script>
+
+</body>
+
+</html>

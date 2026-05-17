@@ -1,19 +1,5 @@
-# Python
-venv/
-__pycache__/
-*.pyc
-
-# Node
-node_modules/
-
-# Env
 .env
-
-# Vite
-dist/
-
-# VSCode
-.vscode/
-
-# OS
-.DS_Store
+venv
+backend/venv
+__pycache__
+db.sqlite3
