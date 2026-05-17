@@ -128,9 +128,9 @@
 
                 catch (error) {
 
-                    console.log(error)
+                    console.error(error)
 
-                    alert("Server error")
+                    alert("Connection/Server error: " + error.message + "\nPlease open your browser's Developer Tools (F12) and check the Console tab if this persists.")
                 }
             }
 
