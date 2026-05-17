@@ -1,7 +1,17 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-import dj_database_url
+
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
+try:
+    import whitenoise
+    HAS_WHITENOISE = True
+except ImportError:
+    HAS_WHITENOISE = False
 
 load_dotenv()
 
@@ -13,7 +23,7 @@ SECRET_KEY = os.getenv(
     "temporary-secret-key"
 )
 
-DEBUG = False
+DEBUG = not os.getenv("DATABASE_URL")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -42,14 +52,19 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+]
+
+if HAS_WHITENOISE:
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+
+MIDDLEWARE.extend([
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
+])
 
 
 ROOT_URLCONF = 'notiyalo.urls'
@@ -81,7 +96,7 @@ DATABASES = {
     }
 }
 
-if os.getenv("DATABASE_URL"):
+if os.getenv("DATABASE_URL") and dj_database_url:
     DATABASES['default'] = dj_database_url.config(
         conn_max_age=600
     )
@@ -116,11 +131,12 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+if HAS_WHITENOISE:
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 
 REST_FRAMEWORK = {
