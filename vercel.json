@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "src": "/app.js", "dest": "/apps/frontend/app.js" },
+    { "src": "/(.*)", "dest": "/apps/frontend/index.html" }
+  ]
+}
