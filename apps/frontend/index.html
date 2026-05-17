@@ -30,6 +30,27 @@
             ? 'http://127.0.0.1:8000'
             : 'https://notiyalo.onrender.com';
 
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem("token");
+            const headers = {
+                ...options.headers,
+            };
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+            if (response.status === 401) {
+                localStorage.removeItem("token");
+                alert("Your session has expired or is invalid. Please log in again.");
+                window.location.reload();
+                throw new Error("Unauthorized");
+            }
+            return response;
+        }
+
         function AuthPage({ setIsLoggedIn }) {
 
             const [isLogin, setIsLogin] = React.useState(true)
@@ -398,18 +419,8 @@
 
                 try {
 
-                    const response = await fetch(
-
-                        `${API_BASE_URL}/api/notes/`,
-
-                        {
-
-                            headers: {
-
-                                "Authorization":
-                                    `Bearer ${localStorage.getItem("token")}`
-                            }
-                        }
+                    const response = await fetchWithAuth(
+                        `${API_BASE_URL}/api/notes/`
                     );
 
                     const data = await response.json();
@@ -482,17 +493,13 @@
 
                 try {
 
-                    await fetch(
+                    const response = await fetchWithAuth(
                         `${API_BASE_URL}/api/notes/create/`,
                         {
                             method: 'POST',
 
                             headers: {
-
-                                'Content-Type': 'application/json',
-
-                                'Authorization':
-                                    `Bearer ${localStorage.getItem("token")}`
+                                'Content-Type': 'application/json'
                             },
 
                             body: JSON.stringify({
@@ -503,16 +510,22 @@
                         }
                     );
 
-                    alert("Note Saved!");
-
-                    setTitle("");
-                    setCurrentNote("");
+                    if (response.ok) {
+                        alert("Note Saved!");
+                        setTitle("");
+                        setCurrentNote("");
+                        fetchNotes();
+                    } else {
+                        const errData = await response.json();
+                        alert("Error saving note: " + (errData.error || JSON.stringify(errData)));
+                    }
 
                 } catch (error) {
 
                     console.log(error);
-
-                    alert("Error saving note");
+                    if (error.message !== "Unauthorized") {
+                        alert("Error saving note");
+                    }
                 }
             }
 
@@ -626,17 +639,13 @@
 
                     setLoading(true);
 
-                    const response = await fetch(
+                    const response = await fetchWithAuth(
                         `${API_BASE_URL}/api/ai/summary/`,
                         {
                             method: 'POST',
 
                             headers: {
-
-                                'Content-Type': 'application/json',
-
-                                'Authorization':
-                                    `Bearer ${localStorage.getItem("token")}`
+                                'Content-Type': 'application/json'
                             },
 
                             body: JSON.stringify({
@@ -821,18 +830,8 @@
 
                 try {
 
-                    const response = await fetch(
-
-                        `${API_BASE_URL}/api/notes/`,
-
-                        {
-
-                            headers: {
-
-                                "Authorization":
-                                    `Bearer ${localStorage.getItem("token")}`
-                            }
-                        }
+                    const response = await fetchWithAuth(
+                        `${API_BASE_URL}/api/notes/`
                     );
 
                     const data = await response.json();
@@ -873,7 +872,7 @@
 
                     setShowSummary(true);
 
-                    const response = await fetch(
+                    const response = await fetchWithAuth(
 
                         `${API_BASE_URL}/api/ai/summary/`,
 
@@ -882,11 +881,7 @@
                             method: 'POST',
 
                             headers: {
-
-                                'Content-Type': 'application/json',
-
-                                'Authorization':
-                                    `Bearer ${localStorage.getItem("token")}`
+                                'Content-Type': 'application/json'
                             },
 
                             body: JSON.stringify({
@@ -935,9 +930,7 @@
 
                 try {
 
-                    const token = localStorage.getItem("token");
-
-                    const response = await fetch(
+                    const response = await fetchWithAuth(
 
                         `${API_BASE_URL}/api/notes/update/${selectedNote.id}/`,
 
@@ -946,11 +939,7 @@
                             method: "PATCH",
 
                             headers: {
-
-                                "Content-Type": "application/json",
-
-                                "Authorization":
-                                    `Bearer ${token}`
+                                "Content-Type": "application/json"
                             },
 
                             body: JSON.stringify({
@@ -983,29 +972,26 @@
 
                 try {
 
-                    await fetch(
+                    const response = await fetchWithAuth(
 
                         `${API_BASE_URL}/api/notes/delete/${id}/`,
 
                         {
-
-                            method: 'DELETE',
-
-                            headers: {
-
-                                'Authorization':
-                                    `Bearer ${localStorage.getItem("token")}`
-                            }
+                            method: 'DELETE'
                         }
                     );
 
-                    fetchNotes();
+                    if (response.ok) {
+                        fetchNotes();
 
-                    setSelectedNote(null);
+                        setSelectedNote(null);
 
-                    setSummary(null);
+                        setSummary(null);
 
-                    setShowSummary(false);
+                        setShowSummary(false);
+                    } else {
+                        alert("Failed to delete note");
+                    }
 
                 } catch (error) {
 
@@ -1497,17 +1483,13 @@
 
                 try {
 
-                    const response = await fetch(
+                    const response = await fetchWithAuth(
                         `${API_BASE_URL}/api/ai/chat/`,
                         {
                             method: 'POST',
 
                             headers: {
-
-                                'Content-Type': 'application/json',
-
-                                'Authorization':
-                                    `Bearer ${localStorage.getItem("token")}`
+                                'Content-Type': 'application/json'
                             },
 
                             body: JSON.stringify({
