@@ -96,10 +96,13 @@ DATABASES = {
     }
 }
 
-if os.getenv("DATABASE_URL") and dj_database_url:
-    DATABASES['default'] = dj_database_url.config(
-        conn_max_age=600
-    )
+db_url = os.getenv("DATABASE_URL")
+if db_url and db_url.strip() and dj_database_url:
+    try:
+        DATABASES['default'] = dj_database_url.parse(db_url, conn_max_age=600)
+    except Exception as e:
+        import sys
+        print(f"Database configuration error: {e}", file=sys.stderr)
 
 
 AUTH_PASSWORD_VALIDATORS = [
