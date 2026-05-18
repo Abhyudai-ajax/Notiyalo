@@ -1,11 +1,15 @@
 {
-  "outputDirectory": "apps/frontend",
+  "version": 2,
+  "builds": [
+    { "src": "apps/frontend/index.html", "use": "@vercel/static" },
+    { "src": "apps/frontend/app.js", "use": "@vercel/static" }
+  ],
   "routes": [
     {
       "src": "/app.js",
-      "dest": "/app.js",
+      "dest": "/apps/frontend/app.js",
       "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
     },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/(.*)", "dest": "/apps/frontend/index.html" }
   ]
 }
