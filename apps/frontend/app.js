@@ -1,9 +1,7 @@
 const { useState, useEffect } = React;
 
 // ✅ FIX 1: Single correct backend URL
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://127.0.0.1:8000'
-    : 'https://notiyalo.onrender.com';
+const API_BASE_URL = 'https://notiyalo.onrender.com';
 
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -352,3 +350,4 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
