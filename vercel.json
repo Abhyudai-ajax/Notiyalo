@@ -1,6 +1,10 @@
 {
   "routes": [
-    { "src": "/app.js", "dest": "/apps/frontend/app.js" },
+    {
+      "src": "/app.js",
+      "dest": "/apps/frontend/app.js",
+      "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
+    },
     { "src": "/(.*)", "dest": "/apps/frontend/index.html" }
   ]
 }
