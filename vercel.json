@@ -1,10 +1,11 @@
 {
+  "outputDirectory": "apps/frontend",
   "routes": [
     {
       "src": "/app.js",
-      "dest": "/apps/frontend/app.js",
+      "dest": "/app.js",
       "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" }
     },
-    { "src": "/(.*)", "dest": "/apps/frontend/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
