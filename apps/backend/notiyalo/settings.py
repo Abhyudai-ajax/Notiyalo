@@ -66,7 +66,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'notiyalo.wsgi.application'
 
-db_url = os.getenv('DATABASE_URL')
+db_url = os.getenv('DATABASE_URL', '').strip()
 if db_url:
     DATABASES = {'default': dj_database_url.parse(db_url, conn_max_age=600)}
 else:
