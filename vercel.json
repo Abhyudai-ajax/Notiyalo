@@ -1,1 +1,1 @@
-{"outputDirectory":"apps/frontend","buildCommand":""}
+{"version":2,"builds":[{"src":"apps/frontend/index.html","use":"@vercel/static"}],"routes":[{"src":"(.*)","dest":"apps/frontend/index.html"}]}
