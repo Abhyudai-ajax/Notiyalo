@@ -1877,8 +1877,8 @@
         async function saveDetailNote() {
             if (!selectedNote) return;
             try {
-                const res = await fetch(`${API}/api/notes/${selectedNote.id}/`, {
-                    method: 'PATCH',
+                const res = await fetch(`${API}/api/notes/update/${selectedNote.id}/`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
                     body: JSON.stringify({
                         title: document.getElementById('detail-title').value,
@@ -1887,6 +1887,7 @@
                     })
                 });
                 if (res.ok) { toast('Saved ✓'); await loadNotes() }
+                else toast('Save failed', 'error');
             } catch (e) { console.error(e) }
         }
 
@@ -1898,7 +1899,7 @@
 
         async function deleteNoteById(id) {
             try {
-                await fetch(`${API}/api/notes/${id}/`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+                await fetch(`${API}/api/notes/delete/${id}/`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
                 toast('Note deleted', '');
                 await loadNotes();
             } catch (e) { toast('Error deleting', 'error') }
