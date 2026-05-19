@@ -2,1838 +2,2067 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notiyalo — AI Notes</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
 
-    <title>Notiyalo AI Workspace</title>
+        :root {
+            --bg: #060608;
+            --surface: #0e0e14;
+            --surface2: #16161f;
+            --surface3: #1e1e2a;
+            --border: #ffffff12;
+            --border2: #ffffff20;
+            --accent: #7c6dfa;
+            --accent2: #fa6d9a;
+            --accent3: #6dfabc;
+            --text: #f0f0ff;
+            --muted: #8888aa;
+            --glow: rgba(124, 109, 250, 0.3);
+        }
 
-    <script src="https://cdn.tailwindcss.com"></script>
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            overflow: hidden
+        }
 
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        /* ─── NOISE OVERLAY ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: .5;
+        }
 
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        /* ─── ANIMATED BG ORBS ─── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+            animation: float 8s ease-in-out infinite
+        }
 
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        .orb1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(124, 109, 250, 0.12);
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s
+        }
 
+        .orb2 {
+            width: 350px;
+            height: 350px;
+            background: rgba(250, 109, 154, 0.08);
+            bottom: -80px;
+            right: -80px;
+            animation-delay: -3s
+        }
+
+        .orb3 {
+            width: 250px;
+            height: 250px;
+            background: rgba(109, 250, 188, 0.07);
+            top: 40%;
+            left: 40%;
+            animation-delay: -5s
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1)
+            }
+
+            50% {
+                transform: translateY(-30px) scale(1.05)
+            }
+        }
+
+        /* ─── LAYOUT ─── */
+        #app {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            height: 100vh;
+            overflow: hidden
+        }
+
+        /* ─── SIDEBAR ─── */
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 24px;
+            padding: 0 8px;
+            background: linear-gradient(135deg, #7c6dfa, #fa6d9a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo span {
+            display: block;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: var(--muted);
+            margin-top: -2px;
+            -webkit-text-fill-color: var(--muted)
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--muted);
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.1), rgba(250, 109, 154, 0.05));
+            opacity: 0;
+            transition: opacity 0.2s;
+            border-radius: 12px;
+        }
+
+        .nav-item:hover {
+            color: var(--text);
+            background: var(--surface2)
+        }
+
+        .nav-item:hover::before {
+            opacity: 1
+        }
+
+        .nav-item.active {
+            color: var(--text);
+            background: var(--surface2);
+            border-color: var(--border2);
+        }
+
+        .nav-item.active::before {
+            opacity: 1
+        }
+
+        .nav-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0
+        }
+
+        .nav-item.active .nav-icon {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            box-shadow: 0 4px 12px var(--glow)
+        }
+
+        .nav-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-left: auto;
+            animation: pulse2 2s infinite
+        }
+
+        @keyframes pulse2 {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8)
+            }
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid var(--border)
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-card:hover {
+            border-color: var(--border2)
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .user-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .user-status {
+            font-size: 10px;
+            color: var(--muted)
+        }
+
+        .logout-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--muted);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .logout-btn:hover {
+            background: rgba(250, 80, 80, 0.15);
+            color: #fa6060
+        }
+
+        /* ─── MAIN ─── */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column
+        }
+
+        .main::-webkit-scrollbar {
+            width: 4px
+        }
+
+        .main::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        .main::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 2px
+        }
+
+        /* ─── TOPBAR ─── */
+        .topbar {
+            padding: 20px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: rgba(6, 6, 8, 0.8);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .page-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.3px
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .pill-btn {
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 1px solid var(--border2);
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .pill-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 20px var(--glow)
+        }
+
+        .pill-btn.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 4px 20px var(--glow);
+        }
+
+        .pill-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px var(--glow)
+        }
+
+        /* ─── CONTENT ─── */
+        .content {
+            padding: 24px 28px;
+            flex: 1
+        }
+
+        /* ─── STATS GRID ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            cursor: default;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.05), rgba(250, 109, 154, 0.03));
+        }
+
+        .stat-card:hover {
+            border-color: var(--border2);
+            transform: translateY(-2px)
+        }
+
+        .stat-card:hover::before {
+            opacity: 1
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 12px
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1
+        }
+
+        .stat-sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 6px
+        }
+
+        .stat-glow {
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            filter: blur(30px);
+            opacity: 0.4
+        }
+
+        /* ─── 3D CARD WRAPPER ─── */
+        .card-3d-wrap {
+            perspective: 1000px
+        }
+
+        .card-3d {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            transition: transform 0.1s ease, box-shadow 0.3s;
+            transform-style: preserve-3d;
+        }
+
+        .card-3d:hover {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px var(--glow)
+        }
+
+        /* ─── EDITOR SECTION ─── */
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 16px
+        }
+
+        .editor-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .editor-dots {
+            display: flex;
+            gap: 6px
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%
+        }
+
+        .dot.red {
+            background: #ff5f57
+        }
+
+        .dot.yellow {
+            background: #ffbd2e
+        }
+
+        .dot.green {
+            background: #28c840
+        }
+
+        .editor-tag {
+            margin-left: auto;
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 11px;
+            background: rgba(124, 109, 250, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(124, 109, 250, 0.3);
+        }
+
+        .note-title-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: 'Syne', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            padding: 20px 20px 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .note-title-input::placeholder {
+            color: var(--muted)
+        }
+
+        .note-textarea {
+            width: 100%;
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text);
+            padding: 8px 20px 20px;
+            min-height: 300px;
+        }
+
+        .note-textarea::placeholder {
+            color: var(--muted)
+        }
+
+        .editor-footer {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface2);
+        }
+
+        .char-count {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .save-btn {
+            padding: 10px 24px;
+            border-radius: 100px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            box-shadow: 0 4px 20px var(--glow);
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px var(--glow)
+        }
+
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        /* ─── AI PANEL ─── */
+        .ai-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .ai-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-orb {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--accent), var(--accent3));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            animation: spin-slow 8s linear infinite;
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        @keyframes spin-slow {
+            from {
+                filter: hue-rotate(0deg)
+            }
+
+            to {
+                filter: hue-rotate(360deg)
+            }
+        }
+
+        .ai-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700
+        }
+
+        .ai-badge {
+            margin-left: auto;
+            padding: 3px 8px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(109, 250, 188, 0.1);
+            color: var(--accent3);
+            border: 1px solid rgba(109, 250, 188, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ai-body {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            min-height: 200px
+        }
+
+        .ai-body::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .ai-body::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px
+        }
+
+        .ai-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 12px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .ai-placeholder-icon {
+            font-size: 36px;
+            animation: bounce 2s ease-in-out infinite
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-8px)
+            }
+        }
+
+        .ai-placeholder p {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.6
+        }
+
+        .ai-result {
+            animation: fadeUp 0.4s ease
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .ai-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            margin-top: 16px;
+        }
+
+        .ai-section-label:first-child {
+            margin-top: 0
+        }
+
+        .ai-section-label.blue {
+            color: var(--accent)
+        }
+
+        .ai-section-label.green {
+            color: var(--accent3)
+        }
+
+        .ai-section-label.pink {
+            color: var(--accent2)
+        }
+
+        .ai-text {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text)
+        }
+
+        .ai-insight {
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: var(--surface2);
+            border-left: 2px solid var(--accent3);
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .ai-suggested-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .ai-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2)
+        }
+
+        .ai-gen-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.2), rgba(250, 109, 154, 0.1));
+            border: 1px solid rgba(124, 109, 250, 0.3);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ai-gen-btn:hover {
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.3), rgba(250, 109, 154, 0.2));
+            border-color: rgba(124, 109, 250, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px var(--glow);
+        }
+
+        .ai-gen-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .ai-loading {
+            display: flex;
+            gap: 4px;
+            align-items: center
+        }
+
+        .ai-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: wave 1.2s ease-in-out infinite
+        }
+
+        .ai-dot:nth-child(2) {
+            animation-delay: 0.15s
+        }
+
+        .ai-dot:nth-child(3) {
+            animation-delay: 0.3s
+        }
+
+        @keyframes wave {
+
+            0%,
+            100% {
+                transform: scaleY(1)
+            }
+
+            50% {
+                transform: scaleY(1.8)
+            }
+        }
+
+        /* ─── NOTES GRID ─── */
+        .notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 10px 16px;
+            transition: all 0.2s;
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--glow)
+        }
+
+        .search-bar input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            width: 220px;
+        }
+
+        .search-bar input::placeholder {
+            color: var(--muted)
+        }
+
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px
+        }
+
+        .note-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .note-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+        }
+
+        .note-card:hover {
+            border-color: var(--border2);
+            transform: translateY(-4px) rotateX(2deg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--glow);
+        }
+
+        .note-card:hover::before {
+            transform: scaleX(1)
+        }
+
+        .note-card-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.3px
+        }
+
+        .note-card-preview {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden
+        }
+
+        .note-card-footer {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .note-tag {
+            padding: 3px 8px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(124, 109, 250, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(124, 109, 250, 0.2);
+        }
+
+        .note-date {
+            font-size: 10px;
+            color: var(--muted)
+        }
+
+        .note-delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(250, 80, 80, 0.1);
+            color: #fa6060;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .note-card:hover .note-delete-btn {
+            opacity: 1
+        }
+
+        .note-delete-btn:hover {
+            background: rgba(250, 80, 80, 0.25)
+        }
+
+        .empty-state {
+            grid-column: 1/-1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            gap: 12px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            animation: bounce 2s ease-in-out infinite
+        }
+
+        .empty-text {
+            font-family: 'Syne', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--muted)
+        }
+
+        .empty-sub {
+            font-size: 13px;
+            color: var(--muted);
+            opacity: 0.6
+        }
+
+        /* ─── NOTE DETAIL ─── */
+        .note-detail {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            gap: 0;
+        }
+
+        .detail-editor {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border)
+        }
+
+        .detail-ai {
+            width: 360px;
+            display: flex;
+            flex-direction: column
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 100px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+
+        .back-btn:hover {
+            border-color: var(--border2);
+            color: var(--text)
+        }
+
+        /* ─── AI CHAT ─── */
+        .chat-wrap {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 130px)
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 3px
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px
+        }
+
+        .msg {
+            display: flex;
+            gap: 10px;
+            animation: fadeUp 0.3s ease
+        }
+
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .msg.user {
+            flex-direction: row-reverse
+        }
+
+        .msg.user .msg-avatar {
+            background: linear-gradient(135deg, var(--accent), var(--accent2))
+        }
+
+        .msg.ai .msg-avatar {
+            background: linear-gradient(135deg, var(--accent3), var(--accent));
+            animation: spin-slow 8s linear infinite
+        }
+
+        .msg-bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .msg.user .msg-bubble {
+            background: linear-gradient(135deg, rgba(124, 109, 250, 0.25), rgba(250, 109, 154, 0.15));
+            border: 1px solid rgba(124, 109, 250, 0.3);
+            color: var(--text);
+            border-top-right-radius: 4px;
+        }
+
+        .msg.ai .msg-bubble {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-top-left-radius: 4px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 14px 16px
+        }
+
+        .chat-input-wrap {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            transition: border-color 0.2s;
+            line-height: 1.5;
+        }
+
+        .chat-input::placeholder {
+            color: var(--muted)
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--glow)
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px var(--glow);
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px var(--glow)
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        /* ─── AUTH ─── */
+        #auth-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+        }
+
+        .auth-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 44px;
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+        }
+
+        .auth-logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #7c6dfa, #fa6d9a, #6dfabc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .auth-tagline {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 32px
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: var(--surface2);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border)
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 9px;
+            border-radius: 9px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            background: transparent;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .auth-tab.active {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3)
+        }
+
+        .field {
+            margin-bottom: 14px
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase
+        }
+
+        .field input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 13px 16px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .field input::placeholder {
+            color: var(--muted)
+        }
+
+        .field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(124, 109, 250, 0.15)
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Syne', sans-serif;
+            box-shadow: 0 4px 24px var(--glow);
+            transition: all 0.2s;
+            margin-top: 4px;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 36px var(--glow)
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .auth-error {
+            background: rgba(250, 80, 80, 0.1);
+            border: 1px solid rgba(250, 80, 80, 0.2);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #ff8080;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .auth-error.show {
+            display: block
+        }
+
+        /* ─── TOAST ─── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1
+        }
+
+        .toast.success {
+            border-color: rgba(109, 250, 188, 0.3);
+            background: rgba(109, 250, 188, 0.1);
+            color: var(--accent3)
+        }
+
+        .toast.error {
+            border-color: rgba(250, 80, 80, 0.3);
+            background: rgba(250, 80, 80, 0.1);
+            color: #ff8080
+        }
+
+        /* ─── SECTIONS ─── */
+        .section {
+            display: none
+        }
+
+        .section.active {
+            display: flex;
+            flex-direction: column
+        }
+
+        /* ─── SHIMMER ─── */
+        @keyframes shimmer {
+            0% {
+                background-position: -400px 0
+            }
+
+            100% {
+                background-position: 400px 0
+            }
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+            background-size: 800px 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 
-<body class="bg-slate-950">
-
-    <div id="root"></div>
-
-    <script type="text/babel">
-
-        const { useState, useEffect } = React;
-        const API_BASE_URL = 'https://notiyalo.onrender.com';
-
-        async function fetchWithAuth(url, options = {}) {
-            const token = localStorage.getItem("token");
-            const headers = {
-                ...options.headers,
-            };
-            if (token) {
-                headers["Authorization"] = `Bearer ${token}`;
-            }
-            const response = await fetch(url, {
-                ...options,
-                headers
-            });
-            if (response.status === 401) {
-                localStorage.removeItem("token");
-                alert("Your session has expired or is invalid. Please log in again.");
-                window.location.reload();
-                throw new Error("Unauthorized");
-            }
-            return response;
-        }
-
-        function AuthPage({ setIsLoggedIn }) {
-
-            const [isLogin, setIsLogin] = React.useState(true)
-
-            const [username, setUsername] = React.useState("")
-
-            const [email, setEmail] = React.useState("")
-
-            const [password, setPassword] = React.useState("")
-
-            async function handleAuth() {
-
-                try {
-
-                    const url = isLogin
-
-                        ? `${API_BASE_URL}/api/auth/login/`
-
-                        : `${API_BASE_URL}/api/auth/signup/`
-
-                    const body = isLogin
-
-                        ? {
-
-                            username: username,
-
-                            password: password
-                        }
-
-                        : {
-
-                            username: username,
-
-                            email: email,
-
-                            password: password
-                        }
-
-                    const response = await fetch(url, {
-
-                        method: "POST",
-
-                        headers: {
-
-                            "Content-Type": "application/json"
-                        },
-
-                        body: JSON.stringify(body)
-                    })
-
-                    const data = await response.json()
-
-                    console.log(data)
-
-                    if (data.token) {
-
-                        localStorage.setItem(
-                            "token",
-                            data.token
-                        )
-
-                        setIsLoggedIn(true)
-
-                        window.location.href = "/"
-                    }
-
-                    else {
-
-                        alert(
-                            data.error || "Authentication failed"
-                        )
-                    }
-
-                }
-
-                catch (error) {
-
-                    console.error(error)
-
-                    alert("Connection/Server error: " + error.message + "\nPlease open your browser's Developer Tools (F12) and check the Console tab if this persists.")
-                }
-            }
-
-            return (
-
-                <div className="
-            min-h-screen
-            flex
-            items-center
-            justify-center
-            bg-slate-950
-        ">
-
-                    <div className="
-                bg-slate-900
-                p-10
-                rounded-3xl
-                w-full
-                max-w-xl
-                border
-                border-slate-800
-            ">
-
-                        <h1 className="
-                    text-5xl
-                    font-black
-                    mb-8
-                    text-blue-500
-                ">
-                            Notiyalo
-                        </h1>
-
-                        <h2 className="
-                    text-3xl
-                    font-bold
-                    mb-8
-                ">
-                            {
-                                isLogin
-                                    ? "Login"
-                                    : "Create Account"
-                            }
-                        </h2>
-
-                        <div className="space-y-5">
-
-                            <input
-                                placeholder="Username"
-
-                                value={username}
-
-                                onChange={(e) =>
-                                    setUsername(e.target.value)
-                                }
-
-                                className="
-                            w-full
-                            p-5
-                            rounded-2xl
-                            bg-slate-800
-                            outline-none
-                        "
-                            />
-
-                            {
-                                !isLogin && (
-
-                                    <input
-                                        placeholder="Email"
-
-                                        value={email}
-
-                                        onChange={(e) =>
-                                            setEmail(e.target.value)
-                                        }
-
-                                        className="
-                                    w-full
-                                    p-5
-                                    rounded-2xl
-                                    bg-slate-800
-                                    outline-none
-                                "
-                                    />
-                                )
-                            }
-
-                            <input
-                                type="password"
-
-                                placeholder="Password"
-
-                                value={password}
-
-                                onChange={(e) =>
-                                    setPassword(e.target.value)
-                                }
-
-                                className="
-                            w-full
-                            p-5
-                            rounded-2xl
-                            bg-slate-800
-                            outline-none
-                        "
-                            />
-
-                            <button
-                                onClick={handleAuth}
-
-                                className="
-                            w-full
-                            bg-blue-600
-                            hover:bg-blue-700
-                            transition
-                            p-5
-                            rounded-2xl
-                            font-bold
-                            text-xl
-                        "
-                            >
-                                {
-                                    isLogin
-                                        ? "Login"
-                                        : "Signup"
-                                }
-                            </button>
-
-                            <button
-                                onClick={() =>
-                                    setIsLogin(!isLogin)
-                                }
-
-                                className="
-                            text-blue-400
-                            mt-4
-                        "
-                            >
-                                {
-                                    isLogin
-
-                                        ? "Create new account"
-
-                                        : "Already have account?"
-                                }
-                            </button>
-
+<body>
+
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+
+    <!-- AUTH -->
+    <div id="auth-screen">
+        <div class="auth-card">
+            <div class="auth-logo">Notiyalo</div>
+            <div class="auth-tagline">✦ AI-powered notes for the modern mind</div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+                <button class="auth-tab" onclick="switchTab('signup')">Sign up</button>
+            </div>
+            <div class="auth-error" id="auth-error"></div>
+            <div class="field"><label>Username</label><input id="auth-username" placeholder="your_username"
+                    autocomplete="username" /></div>
+            <div class="field" id="email-field" style="display:none"><label>Email</label><input id="auth-email"
+                    placeholder="you@example.com" type="email" /></div>
+            <div class="field"><label>Password</label><input id="auth-password" placeholder="••••••••"
+                    type="password" /></div>
+            <button class="auth-btn" id="auth-submit" onclick="handleAuth()">Login →</button>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app" style="display:none">
+        <div class="sidebar">
+            <div class="logo">Notiyalo <span>AI WORKSPACE</span></div>
+            <div class="nav-item active" onclick="switchSection('dashboard',this)" id="nav-dashboard">
+                <div class="nav-icon">🏠</div> Dashboard <div class="nav-dot"></div>
+            </div>
+            <div class="nav-item" onclick="switchSection('notes',this)" id="nav-notes">
+                <div class="nav-icon">📝</div> My Notes
+            </div>
+            <div class="nav-item" onclick="switchSection('ai',this)" id="nav-ai">
+                <div class="nav-icon">✦</div> AI Chat
+            </div>
+            <div class="sidebar-bottom">
+                <div class="user-card">
+                    <div class="avatar" id="user-avatar">?</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name-display">User</div>
+                        <div class="user-status">✦ AI Active</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">⏻</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main">
+            <!-- DASHBOARD -->
+            <div class="section active" id="section-dashboard">
+                <div class="topbar">
+                    <div class="page-title">Dashboard ✦</div>
+                    <div class="topbar-actions">
+                        <button class="pill-btn primary"
+                            onclick="switchSection('notes',document.getElementById('nav-notes'))">+ New Note</button>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Notes</div>
+                            <div class="stat-value" id="stat-total">—</div>
+                            <div class="stat-sub">in your workspace</div>
+                            <div class="stat-glow" style="background:var(--accent)"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Recent (7d)</div>
+                            <div class="stat-value" id="stat-recent">—</div>
+                            <div class="stat-sub">notes this week</div>
+                            <div class="stat-glow" style="background:var(--accent2)"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Tags Used</div>
+                            <div class="stat-value" id="stat-tags">—</div>
+                            <div class="stat-sub">unique categories</div>
+                            <div class="stat-glow" style="background:var(--accent3)"></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">AI Runs</div>
+                            <div class="stat-value" id="stat-ai">0</div>
+                            <div class="stat-sub">this session</div>
+                            <div class="stat-glow" style="background:#fa6d9a"></div>
+                        </div>
+                    </div>
+
+                    <div class="editor-grid">
+                        <div class="editor-card card-3d" id="editor-3d">
+                            <div class="editor-header">
+                                <div class="editor-dots">
+                                    <div class="dot red"></div>
+                                    <div class="dot yellow"></div>
+                                    <div class="dot green"></div>
+                                </div>
+                                <div class="editor-tag">✦ Smart Editor</div>
+                            </div>
+                            <input class="note-title-input" id="note-title" placeholder="What's on your mind?" />
+                            <textarea class="note-textarea" id="note-content"
+                                placeholder="Start writing... your AI assistant is watching 👀"></textarea>
+                            <div class="editor-footer">
+                                <span class="char-count" id="char-count">0 chars</span>
+                                <button class="save-btn" id="save-btn" onclick="saveNote()">Save Note ✓</button>
+                            </div>
                         </div>
 
-                    </div>
-
-                </div>
-            )
-        }
-        function Header() {
-
-            return (
-
-                <div className="
-            flex
-            justify-between
-            items-center
-            mb-10
-        ">
-
-                    <div>
-
-                        <h1 className="
-                    text-5xl
-                    font-black
-                    text-white
-                ">
-                            AI Notes Workspace
-                        </h1>
-
-                        <p className="
-                    text-slate-400
-                    mt-3
-                    text-lg
-                ">
-                            Collaborative productivity powered by AI
-                        </p>
-
-                    </div>
-
-                    <div className="relative">
-
-                        <button
-
-                            onClick={() => {
-
-                                const menu = document.getElementById("accountMenu")
-
-                                menu.classList.toggle("hidden")
-                            }}
-
-                            className="
-                        w-14
-                        h-14
-                        rounded-full
-                        bg-slate-800
-                        hover:bg-slate-700
-                        transition
-                        flex
-                        items-center
-                        justify-center
-                        text-2xl
-                    "
-                        >
-                            👤
-                        </button>
-
-                        <div
-
-                            id="accountMenu"
-
-                            className="
-                        hidden
-                        absolute
-                        right-0
-                        top-20
-                        w-72
-                        bg-slate-900
-                        border
-                        border-slate-800
-                        rounded-3xl
-                        p-6
-                        shadow-2xl
-                        z-50
-                    "
-                        >
-
-                            <h2 className="
-                        text-2xl
-                        font-bold
-                        mb-4
-                    ">
-                                Account
-                            </h2>
-
-                            <p className="
-                        text-slate-400
-                        mb-6
-                    ">
-                                Logged in successfully
-                            </p>
-
-                            <button
-
-                                onClick={() => {
-
-                                    localStorage.removeItem("token")
-
-                                    window.location.reload()
-                                }}
-
-                                className="
-                            w-full
-                            bg-red-600
-                            hover:bg-red-700
-                            transition
-                            p-4
-                            rounded-2xl
-                            font-bold
-                        "
-                            >
-                                Logout
-                            </button>
-
+                        <div class="ai-card">
+                            <div class="ai-header">
+                                <div class="ai-orb">✦</div>
+                                <div>
+                                    <div class="ai-title">AI Insights</div>
+                                    <div style="font-size:11px;color:var(--muted)">Powered by Claude</div>
+                                </div>
+                                <div class="ai-badge">Live</div>
+                            </div>
+                            <div class="ai-body" id="ai-body">
+                                <div class="ai-placeholder">
+                                    <div class="ai-placeholder-icon">🔮</div>
+                                    <p>Write something above and hit <strong
+                                            style="color:var(--accent)">Generate</strong> to get AI-powered insights</p>
+                                </div>
+                            </div>
+                            <div class="ai-footer">
+                                <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateSummary()">
+                                    <span id="ai-btn-text">✦ Generate AI Summary</span>
+                                </button>
+                            </div>
                         </div>
-
                     </div>
-
                 </div>
-            );
-        }
-
-        function Dashboard({ currentNote, setCurrentNote }) {
-            const [notes, setNotes] = useState([]);
-            useEffect(() => {
-
-                fetchNotes();
-
-            }, []);
-            async function fetchNotes() {
-
-                try {
-
-                    const response = await fetchWithAuth(
-                        `${API_BASE_URL}/api/notes/`
-                    );
-
-                    const data = await response.json();
-
-                    if (Array.isArray(data)) {
-
-                        setNotes(data);
-
-                    } else {
-
-                        setNotes([]);
-                    }
-
-                } catch (error) {
-
-                    console.log(error);
-                }
-            }
-
-            const [title, setTitle] = useState("");
-            <div className="grid grid-cols-4 gap-6 mt-10">
-
-                <div className="bg-slate-900 p-6 rounded-3xl">
-                    <h3 className="text-slate-400">
-                        Total Notes
-                    </h3>
-
-                    <p className="text-5xl font-bold mt-4">
-                        {notes.length}
-                    </p>
-                </div>
-
-                <div className="bg-slate-900 p-6 rounded-3xl">
-                    <h3 className="text-slate-400">
-                        AI Summaries
-                    </h3>
-
-                    <p className="text-5xl font-bold mt-4">
-                        {notes.length}
-                    </p>
-                </div>
-
-                <div className="bg-slate-900 p-6 rounded-3xl">
-                    <h3 className="text-slate-400">
-                        Recent Notes
-                    </h3>
-
-                    <p className="text-5xl font-bold mt-4">
-                        {notes.slice(0, 3).length}
-                    </p>
-                </div>
-
-                <div className="bg-slate-900 p-6 rounded-3xl">
-                    <h3 className="text-slate-400">
-                        Tags Used
-                    </h3>
-
-                    <p className="text-5xl font-bold mt-4">
-                        {
-                            [...new Set(
-                                notes.map(n => n.tags)
-                            )].length
-                        }
-                    </p>
-                </div>
-
             </div>
 
-            async function saveNote() {
-
-                try {
-
-                    const response = await fetchWithAuth(
-                        `${API_BASE_URL}/api/notes/create/`,
-                        {
-                            method: 'POST',
-
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-
-                            body: JSON.stringify({
-                                title: title,
-                                content: currentNote,
-                                tags: 'work,ai'
-                            })
-                        }
-                    );
-
-                    if (response.ok) {
-                        alert("Note Saved!");
-                        setTitle("");
-                        setCurrentNote("");
-                        fetchNotes();
-                    } else {
-                        const errData = await response.json();
-                        alert("Error saving note: " + (errData.error || JSON.stringify(errData)));
-                    }
-
-                } catch (error) {
-
-                    console.log(error);
-                    if (error.message !== "Unauthorized") {
-                        alert("Error saving note");
-                    }
-                }
-            }
-
-            return (
-
-                <div className="
-                    grid
-                    grid-cols-3
-                    gap-8
-                ">
-
-                    <div className="col-span-2">
-
-                        <div className="
-                            bg-slate-900
-                            rounded-3xl
-                            border
-                            border-slate-800
-                            p-6
-                        ">
-
-                            <h2 className="
-                                text-3xl
-                                font-bold
-                                text-white
-                                mb-6
-                            ">
-                                Smart Note Editor
-                            </h2>
-
-                            <input
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Note Title"
-                                className="
-                                    w-full
-                                    bg-slate-800
-                                    rounded-2xl
-                                    p-4
-                                    outline-none
-                                    text-white
-                                    mb-4
-                                "
-                            />
-
-                            <textarea
-                                value={currentNote}
-
-                                onChange={(e) =>
-                                    setCurrentNote(e.target.value)
-                                }
-
-                                placeholder="Write your thoughts..."
-
-                                className="
-                                    w-full
-                                    h-80
-                                    bg-slate-800
-                                    rounded-2xl
-                                    p-5
-                                    resize-none
-                                    outline-none
-                                    text-white
-                                    text-lg
-                                "
-                            />
-
-                            <button
-                                onClick={saveNote}
-                                className="
-                                    mt-6
-                                    bg-blue-600
-                                    hover:bg-blue-500
-                                    transition
-                                    px-6
-                                    py-4
-                                    rounded-2xl
-                                    w-full
-                                    font-bold
-                                    text-lg
-                                    text-white
-                                "
-                            >
-                                Save Note
-                            </button>
-
+            <!-- NOTES -->
+            <div class="section" id="section-notes">
+                <div class="topbar">
+                    <div class="page-title" id="notes-page-title">My Notes</div>
+                    <div class="topbar-actions">
+                        <button class="pill-btn" id="notes-back-btn" onclick="closeNoteDetail()" style="display:none">←
+                            Back</button>
+                    </div>
+                </div>
+                <div class="content" id="notes-content">
+                    <div class="notes-header">
+                        <div style="font-size:13px;color:var(--muted)" id="notes-count-label">Loading...</div>
+                        <div class="search-bar">
+                            <span style="color:var(--muted);font-size:14px">🔍</span>
+                            <input id="search-input" placeholder="Search notes..." oninput="filterNotes()" />
                         </div>
-
                     </div>
-
-                    <div>
-
-                        <AIPanel currentNote={currentNote} />
-
-                    </div>
-
+                    <div class="notes-grid" id="notes-grid"></div>
                 </div>
 
-            );
-        }
-
-        function AIPanel({ currentNote }) {
-
-            const [summary, setSummary] = useState(null);
-
-            const [loading, setLoading] = useState(false);
-
-            async function generateAI() {
-
-                try {
-
-                    setLoading(true);
-
-                    const response = await fetchWithAuth(
-                        `${API_BASE_URL}/api/ai/summary/`,
-                        {
-                            method: 'POST',
-
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-
-                            body: JSON.stringify({
-                                content: currentNote
-                            })
-                        }
-                    );
-
-                    const data = await response.json();
-
-                    setSummary(data);
-
-                    setLoading(false);
-
-                } catch (error) {
-
-                    console.log(error);
-
-                    setLoading(false);
-                }
-            }
-
-            return (
-
-                <div className="
-                    bg-slate-900
-                    rounded-3xl
-                    border
-                    border-slate-800
-                    p-6
-                ">
-
-                    <h2 className="
-                        text-3xl
-                        font-bold
-                        text-white
-                        mb-6
-                    ">
-                        AI Insights
-                    </h2>
-
-                    <div className="
-                        bg-slate-800
-                        rounded-2xl
-                        p-5
-                        min-h-[300px]
-                    ">
-
-                        <h3 className="
-                            text-blue-400
-                            font-bold
-                            text-xl
-                            mb-6
-                        ">
-                            AI Summary
-                        </h3>
-
-                        {
-
-                            summary && (
-
+                <!-- NOTE DETAIL -->
+                <div class="content" id="note-detail-view" style="display:none">
+                    <div class="note-detail">
+                        <div class="detail-editor">
+                            <div class="editor-header">
+                                <div class="editor-dots">
+                                    <div class="dot red"></div>
+                                    <div class="dot yellow"></div>
+                                    <div class="dot green"></div>
+                                </div>
+                                <div class="editor-tag">Editing</div>
+                                <button onclick="deleteNote()"
+                                    style="margin-left:auto;background:rgba(250,80,80,0.1);border:1px solid rgba(250,80,80,0.2);color:#fa6060;padding:5px 12px;border-radius:100px;cursor:pointer;font-size:11px;font-weight:600">Delete</button>
+                            </div>
+                            <input class="note-title-input" id="detail-title" placeholder="Note title" />
+                            <textarea class="note-textarea" id="detail-content" placeholder="Write here..."
+                                style="min-height:400px"></textarea>
+                            <div class="editor-footer">
+                                <span class="char-count" id="detail-char-count">0 chars</span>
+                                <button class="save-btn" onclick="saveDetailNote()">Save Changes ✓</button>
+                            </div>
+                        </div>
+                        <div class="detail-ai ai-card"
+                            style="width:340px;border:none;border-left:1px solid var(--border);border-radius:0">
+                            <div class="ai-header">
+                                <div class="ai-orb">✦</div>
                                 <div>
-
-                                    <h2 className="
-                                        text-2xl
-                                        font-bold
-                                        text-cyan-400
-                                        mb-4
-                                    ">
-                                        Summary
-                                    </h2>
-
-                                    <p className="
-                                        text-lg
-                                        text-slate-300
-                                        mb-8
-                                        leading-8
-                                    ">
-                                        {summary.summary}
-                                    </p>
-
-                                    <h2 className="
-                                        text-2xl
-                                        font-bold
-                                        text-emerald-400
-                                        mb-4
-                                    ">
-                                        Key Insights
-                                    </h2>
-
-                                    <ul className="
-                                        text-lg
-                                        text-slate-300
-                                        mb-8
-                                        list-disc
-                                        pl-6
-                                        space-y-3
-                                    ">
-
-                                        {summary.insights?.map((item, index) => (
-
-                                            <li key={index}>
-                                                {item}
-                                            </li>
-
-                                        ))}
-
-                                    </ul>
-
-                                    <h2 className="
-                                        text-2xl
-                                        font-bold
-                                        text-pink-400
-                                        mb-4
-                                    ">
-                                        Suggested Title
-                                    </h2>
-
-                                    <p className="
-                                        text-xl
-                                        font-semibold
-                                        text-white
-                                    ">
-                                        {summary.title}
-                                    </p>
-
+                                    <div class="ai-title">AI Analysis</div>
                                 </div>
-                            )
-                        }
-
+                                <div class="ai-badge">Live</div>
+                            </div>
+                            <div class="ai-body" id="detail-ai-body">
+                                <div class="ai-placeholder">
+                                    <div class="ai-placeholder-icon">🤖</div>
+                                    <p>Edit your note and AI will analyse it automatically</p>
+                                </div>
+                            </div>
+                            <div class="ai-footer">
+                                <button class="ai-gen-btn" onclick="generateDetailSummary()">✦ Analyse Note</button>
+                            </div>
+                        </div>
                     </div>
-
-                    <button
-                        onClick={generateAI}
-
-                        disabled={loading}
-
-                        className="
-                            mt-6
-                            bg-emerald-600
-                            hover:bg-emerald-500
-                            transition
-                            px-6
-                            py-4
-                            rounded-2xl
-                            w-full
-                            font-bold
-                            text-lg
-                            text-white
-                            disabled:opacity-50
-                        "
-                    >
-                        {loading ? "Generating..." : "Generate AI Summary"}
-                    </button>
-
                 </div>
+            </div>
 
-            );
+            <!-- AI CHAT -->
+            <div class="section" id="section-ai">
+                <div class="topbar">
+                    <div class="page-title">AI Assistant ✦</div>
+                    <div class="topbar-actions">
+                        <button class="pill-btn" onclick="clearChat()">Clear Chat</button>
+                    </div>
+                </div>
+                <div class="content" style="flex:1;display:flex;flex-direction:column;padding-bottom:0">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="msg ai">
+                            <div class="msg-avatar">✦</div>
+                            <div class="msg-bubble">Hey! I'm your AI notes assistant. Ask me anything about your notes,
+                                need help writing, or just vibe 🌊</div>
+                        </div>
+                    </div>
+                    <div class="chat-input-wrap">
+                        <textarea class="chat-input" id="chat-input" placeholder="Ask me anything..." rows="1"
+                            onkeydown="chatKeydown(event)" oninput="autoResize(this)"></textarea>
+                        <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = 'https://notiyalo.onrender.com';
+        let allNotes = [];
+        let selectedNote = null;
+        let aiRunCount = 0;
+        let authMode = 'login';
+        let autoSaveTimer = null;
+        let aiAutoTimer = null;
+
+        /* ─── AUTH ─── */
+        function switchTab(mode) {
+            authMode = mode;
+            document.querySelectorAll('.auth-tab').forEach((t, i) => t.classList.toggle('active', i === (mode === 'login' ? 0 : 1)));
+            document.getElementById('email-field').style.display = mode === 'signup' ? 'block' : 'none';
+            document.getElementById('auth-submit').textContent = mode === 'login' ? 'Login →' : 'Create Account →';
+            document.getElementById('auth-error').classList.remove('show');
         }
 
-        function NotesManager() {
-
-            const [notes, setNotes] = useState([]);
-
-            const [selectedNote, setSelectedNote] = useState(null);
-
-            const [summary, setSummary] = useState(null);
-
-            const [loading, setLoading] = useState(false);
-
-            const [showSummary, setShowSummary] = useState(false);
-
-            const [search, setSearch] = useState("");
-
-            useEffect(() => {
-
-                fetchNotes();
-
-            }, []);
-
-            async function fetchNotes() {
-
-                try {
-
-                    const response = await fetchWithAuth(
-                        `${API_BASE_URL}/api/notes/`
-                    );
-
-                    const data = await response.json();
-
-                    console.log(data);
-
-                    if (Array.isArray(data)) {
-
-                        setNotes(data);
-
-                    } else {
-
-                        setNotes([]);
-                    }
-
-                } catch (error) {
-
-                    console.log(error);
-
-                    setNotes([]);
+        async function handleAuth() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const email = document.getElementById('auth-email').value.trim();
+            const errEl = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-submit');
+            if (!username || !password) { errEl.textContent = 'Fill in all fields'; errEl.classList.add('show'); return }
+            btn.disabled = true; btn.textContent = 'Please wait...'; errEl.classList.remove('show');
+            try {
+                const url = authMode === 'login' ? `${API}/api/auth/login/` : `${API}/api/auth/signup/`;
+                const body = authMode === 'login' ? { username, password } : { username, email, password };
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const data = await res.json();
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('username', username);
+                    initApp(username);
+                } else {
+                    errEl.textContent = data.error || 'Authentication failed';
+                    errEl.classList.add('show');
                 }
+            } catch (e) {
+                errEl.textContent = 'Server error — backend may be waking up, try again in 30s';
+                errEl.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = authMode === 'login' ? 'Login →' : 'Create Account →';
             }
+        }
 
-            async function generateSummary(content) {
+        document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth() });
 
-                if (!content || content.trim() === "") {
+        function initApp(username) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            const initial = (username || 'U')[0].toUpperCase();
+            document.getElementById('user-avatar').textContent = initial;
+            document.getElementById('user-name-display').textContent = username || 'User';
+            loadNotes();
+            setupEditor3D();
+        }
 
-                    setSummary(null);
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'flex';
+        }
 
-                    setShowSummary(false);
+        /* ─── CHECK TOKEN ─── */
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            if (token) { initApp(username || 'User') }
+            setupEditor3D();
+            document.getElementById('note-content').addEventListener('input', function () {
+                document.getElementById('char-count').textContent = this.value.length + ' chars';
+            });
+            document.getElementById('detail-content').addEventListener('input', function () {
+                document.getElementById('detail-char-count').textContent = this.value.length + ' chars';
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(saveDetailNote, 1500);
+                clearTimeout(aiAutoTimer);
+                aiAutoTimer = setTimeout(generateDetailSummary, 2000);
+            });
+        });
 
-                    return;
-                }
+        /* ─── 3D TILT ─── */
+        function setupEditor3D() {
+            const card = document.getElementById('editor-3d');
+            if (!card) return;
+            card.addEventListener('mousemove', e => {
+                const r = card.getBoundingClientRect();
+                const x = (e.clientX - r.left) / r.width - 0.5;
+                const y = (e.clientY - r.top) / r.height - 0.5;
+                card.style.transform = `perspective(1000px) rotateY(${x * 6}deg) rotateX(${-y * 4}deg)`;
+            });
+            card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0)' });
+        }
 
-                try {
+        /* ─── NAV ─── */
+        function switchSection(id, el) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('section-' + id).classList.add('active');
+            el.classList.add('active');
+            if (id === 'notes') { loadNotes(); closeNoteDetail() }
+        }
 
-                    setLoading(true);
+        /* ─── TOAST ─── */
+        function toast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.className = 'toast show ' + (type || '');
+            setTimeout(() => t.className = 'toast', 2500);
+        }
 
-                    setShowSummary(true);
+        /* ─── NOTES ─── */
+        async function loadNotes() {
+            try {
+                const res = await fetch(`${API}/api/notes/`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+                const data = await res.json();
+                allNotes = Array.isArray(data) ? data : [];
+                renderStats();
+                renderNotes(allNotes);
+            } catch (e) { console.error(e) }
+        }
 
-                    const response = await fetchWithAuth(
+        function renderStats() {
+            document.getElementById('stat-total').textContent = allNotes.length;
+            const week = allNotes.filter(n => {
+                const d = new Date(n.created_at || n.updated_at || Date.now());
+                return (Date.now() - d) < 7 * 86400000;
+            }).length;
+            document.getElementById('stat-recent').textContent = week;
+            const tags = [...new Set(allNotes.flatMap(n => (n.tags || '').split(',').map(t => t.trim()).filter(Boolean)))].length;
+            document.getElementById('stat-tags').textContent = tags;
+        }
 
-                        `${API_BASE_URL}/api/ai/summary/`,
-
-                        {
-
-                            method: 'POST',
-
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-
-                            body: JSON.stringify({
-
-                                content: content
-                            })
-                        }
-                    );
-
-                    const data = await response.json();
-
-                    setSummary(data);
-
-                    setLoading(false);
-
-                } catch (error) {
-
-                    console.log(error);
-
-                    setLoading(false);
-                }
+        function renderNotes(notes) {
+            const grid = document.getElementById('notes-grid');
+            const label = document.getElementById('notes-count-label');
+            label.textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''}`;
+            if (!notes.length) {
+                grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No notes yet</div><div class="empty-sub">Create your first note in the Dashboard</div></div>`;
+                return;
             }
+            grid.innerHTML = notes.map(n => `
+    <div class="note-card" onclick="openNote(${n.id})">
+      <button class="note-delete-btn" onclick="event.stopPropagation();deleteNoteById(${n.id})">✕</button>
+      <div class="note-card-title">${escHtml(n.title || 'Untitled')}</div>
+      <div class="note-card-preview">${escHtml((n.content || '').slice(0, 150))}</div>
+      <div class="note-card-footer">
+        <div class="note-tag">${escHtml((n.tags || 'general').split(',')[0].trim())}</div>
+        <div class="note-date">${timeAgo(n.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+        }
 
-            function openNote(note) {
+        function filterNotes() {
+            const q = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allNotes.filter(n =>
+                (n.title || '').toLowerCase().includes(q) ||
+                (n.content || '').toLowerCase().includes(q) ||
+                (n.tags || '').toLowerCase().includes(q)
+            );
+            renderNotes(filtered);
+        }
 
-                setSelectedNote(note);
+        function openNote(id) {
+            selectedNote = allNotes.find(n => n.id === id);
+            if (!selectedNote) return;
+            document.getElementById('notes-content').style.display = 'none';
+            document.getElementById('note-detail-view').style.display = 'block';
+            document.getElementById('notes-back-btn').style.display = 'flex';
+            document.getElementById('notes-page-title').textContent = 'Edit Note';
+            document.getElementById('detail-title').value = selectedNote.title || '';
+            document.getElementById('detail-content').value = selectedNote.content || '';
+            document.getElementById('detail-char-count').textContent = (selectedNote.content || '').length + ' chars';
+        }
 
-                setSummary(null);
+        function closeNoteDetail() {
+            selectedNote = null;
+            document.getElementById('notes-content').style.display = 'block';
+            document.getElementById('note-detail-view').style.display = 'none';
+            document.getElementById('notes-back-btn').style.display = 'none';
+            document.getElementById('notes-page-title').textContent = 'My Notes';
+        }
 
-                setShowSummary(false);
-            }
-
-            function updateSelectedNote(key, value) {
-
-                setSelectedNote({
-
-                    ...selectedNote,
-
-                    [key]: value
+        async function saveDetailNote() {
+            if (!selectedNote) return;
+            try {
+                const res = await fetch(`${API}/api/notes/${selectedNote.id}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: JSON.stringify({
+                        title: document.getElementById('detail-title').value,
+                        content: document.getElementById('detail-content').value,
+                        tags: selectedNote.tags || 'general'
+                    })
                 });
-            }
-
-            async function saveEditedNote() {
-
-                if (!selectedNote) return;
-
-                try {
-
-                    const response = await fetchWithAuth(
-
-                        `${API_BASE_URL}/api/notes/update/${selectedNote.id}/`,
-
-                        {
-
-                            method: "PATCH",
-
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-
-                            body: JSON.stringify({
-
-                                title: selectedNote.title,
-
-                                content: selectedNote.content,
-
-                                tags: selectedNote.tags
-                            })
-                        }
-                    );
-
-                    if (response.ok) {
-
-                        fetchNotes();
-
-                    } else {
-
-                        alert("Failed to save changes");
-                    }
-
-                } catch (error) {
-
-                    console.log(error);
-                }
-            }
-
-            async function deleteNote(id) {
-
-                try {
-
-                    const response = await fetchWithAuth(
-
-                        `${API_BASE_URL}/api/notes/delete/${id}/`,
-
-                        {
-                            method: 'DELETE'
-                        }
-                    );
-
-                    if (response.ok) {
-                        fetchNotes();
-
-                        setSelectedNote(null);
-
-                        setSummary(null);
-
-                        setShowSummary(false);
-                    } else {
-                        alert("Failed to delete note");
-                    }
-
-                } catch (error) {
-
-                    console.log(error);
-                }
-            }
-
-            const filteredNotes = notes.filter(note =>
-
-                note.title?.toLowerCase().includes(
-                    search.toLowerCase()
-                )
-
-                ||
-
-                note.content?.toLowerCase().includes(
-                    search.toLowerCase()
-                )
-
-                ||
-
-                note.tags?.toLowerCase().includes(
-                    search.toLowerCase()
-                )
-            );
-
-            return (
-
-                <div className="mt-8">
-
-                    <div className="
-                flex
-                justify-between
-                items-center
-                mb-8
-            ">
-
-                        <h2 className="
-                    text-4xl
-                    font-bold
-                ">
-                            Saved Notes
-                        </h2>
-
-                        {
-                            !selectedNote && (
-
-                                <input
-
-                                    placeholder="Search notes..."
-
-                                    value={search}
-
-                                    onChange={(e) =>
-                                        setSearch(e.target.value)
-                                    }
-
-                                    className="
-                                w-[400px]
-                                p-4
-                                rounded-2xl
-                                bg-slate-800
-                                outline-none
-                            "
-                                />
-                            )
-                        }
-
-                    </div>
-
-                    {
-
-                        !selectedNote && (
-
-                            <div className="
-                        grid
-                        grid-cols-3
-                        gap-6
-                    ">
-
-                                {filteredNotes.map((note) => (
-
-                                    <div
-                                        key={note.id}
-
-                                        onClick={() => openNote(note)}
-
-                                        className="
-                                    bg-slate-900
-                                    border
-                                    border-slate-800
-                                    rounded-3xl
-                                    p-6
-                                    cursor-pointer
-                                    hover:border-blue-500
-                                    transition
-                                    h-[230px]
-                                    overflow-hidden
-                                "
-                                    >
-
-                                        <h3 className="
-                                    text-2xl
-                                    font-bold
-                                    mb-4
-                                ">
-                                            {note.title}
-                                        </h3>
-
-                                        <p className="
-                                    text-slate-400
-                                    leading-7
-                                    mb-4
-                                ">
-                                            {note.content?.slice(0, 140)}...
-                                        </p>
-
-                                        <p className="
-                                    text-blue-400
-                                ">
-                                            #{note.tags}
-                                        </p>
-
-                                    </div>
-
-                                ))}
-
-                            </div>
-                        )
-                    }
-
-                    {
-
-                        selectedNote && (
-
-                            <div>
-
-                                <button
-
-                                    onClick={() => {
-
-                                        setSelectedNote(null);
-
-                                        setSummary(null);
-
-                                        setShowSummary(false);
-                                    }}
-
-                                    className="
-                                mb-6
-                                bg-slate-800
-                                hover:bg-slate-700
-                                px-5
-                                py-3
-                                rounded-2xl
-                            "
-                                >
-                                    ← Back to Notes
-                                </button>
-
-                                <div className={`
-                            grid
-                            gap-8
-                            ${showSummary
-                                        ? 'grid-cols-5'
-                                        : 'grid-cols-1'}
-                        `}>
-
-                                    <div className={`
-                                bg-slate-900
-                                border
-                                border-slate-800
-                                rounded-3xl
-                                p-8
-                                ${showSummary
-                                            ? 'col-span-3'
-                                            : 'w-full'}
-                            `}>
-
-                                        <div className="
-                                    flex
-                                    justify-between
-                                    items-center
-                                    mb-6
-                                ">
-
-                                            <h2 className="
-                                        text-3xl
-                                        font-bold
-                                    ">
-                                                Edit Note
-                                            </h2>
-
-                                            <div className="
-                                        flex
-                                        gap-4
-                                    ">
-
-                                                <button
-
-                                                    onClick={() =>
-                                                        generateSummary(
-                                                            selectedNote.content
-                                                        )
-                                                    }
-
-                                                    className="
-                                                bg-cyan-600
-                                                hover:bg-cyan-500
-                                                px-5
-                                                py-3
-                                                rounded-2xl
-                                            "
-                                                >
-                                                    AI Summary
-                                                </button>
-
-                                                <button
-
-                                                    onClick={() =>
-                                                        deleteNote(selectedNote.id)
-                                                    }
-
-                                                    className="
-                                                bg-red-600
-                                                hover:bg-red-500
-                                                px-5
-                                                py-3
-                                                rounded-2xl
-                                            "
-                                                >
-                                                    Delete
-                                                </button>
-
-                                            </div>
-
-                                        </div>
-
-                                        <input
-
-                                            value={selectedNote.title}
-
-                                            onChange={(e) =>
-                                                updateSelectedNote(
-                                                    "title",
-                                                    e.target.value
-                                                )
-                                            }
-
-                                            className="
-                                        w-full
-                                        p-4
-                                        rounded-2xl
-                                        bg-slate-800
-                                        mb-4
-                                        text-2xl
-                                        font-bold
-                                    "
-                                        />
-
-                                        <input
-
-                                            placeholder="Tags"
-
-                                            value={selectedNote.tags || ""}
-
-                                            onChange={(e) =>
-                                                updateSelectedNote(
-                                                    "tags",
-                                                    e.target.value
-                                                )
-                                            }
-
-                                            className="
-                                        w-full
-                                        p-4
-                                        rounded-2xl
-                                        bg-slate-800
-                                        mb-4
-                                    "
-                                        />
-
-                                        <textarea
-
-                                            value={selectedNote.content}
-
-                                            onChange={(e) => {
-
-                                                updateSelectedNote(
-                                                    "content",
-                                                    e.target.value
-                                                );
-
-                                                clearTimeout(window.autoSave);
-
-                                                window.autoSave = setTimeout(() => {
-
-                                                    saveEditedNote();
-
-                                                }, 1200);
-
-                                                clearTimeout(window.aiTimer);
-
-                                                window.aiTimer = setTimeout(() => {
-
-                                                    if (e.target.value.trim()) {
-
-                                                        generateSummary(
-                                                            e.target.value
-                                                        );
-
-                                                    } else {
-
-                                                        setSummary(null);
-
-                                                        setShowSummary(false);
-                                                    }
-
-                                                }, 1200);
-                                            }}
-
-                                            className="
-                                        w-full
-                                        h-[550px]
-                                        bg-slate-800
-                                        rounded-2xl
-                                        p-5
-                                        resize-none
-                                        outline-none
-                                        text-lg
-                                        leading-8
-                                    "
-                                        />
-
-                                    </div>
-
-                                    {
-
-                                        showSummary && (
-
-                                            <div className="
-                                        col-span-2
-                                        bg-slate-900
-                                        border
-                                        border-slate-800
-                                        rounded-3xl
-                                        p-8
-                                        overflow-y-auto
-                                    ">
-
-                                                <h2 className="
-                                            text-3xl
-                                            font-bold
-                                            mb-8
-                                        ">
-                                                    AI Summary
-                                                </h2>
-
-                                                {
-
-                                                    !selectedNote.content?.trim()
-
-                                                        ? (
-
-                                                            <p className="
-                                                        text-slate-500
-                                                    ">
-                                                                No text detected.
-                                                            </p>
-                                                        )
-
-                                                        : loading
-
-                                                            ? (
-
-                                                                <p>
-                                                                    Generating summary...
-                                                                </p>
-                                                            )
-
-                                                            : (
-
-                                                                summary && (
-
-                                                                    <div>
-
-                                                                        <h3 className="
-                                                                    text-cyan-400
-                                                                    text-2xl
-                                                                    font-bold
-                                                                    mb-4
-                                                                ">
-                                                                            Summary
-                                                                        </h3>
-
-                                                                        <p className="
-                                                                    text-slate-300
-                                                                    leading-8
-                                                                    mb-8
-                                                                ">
-                                                                            {summary.summary}
-                                                                        </p>
-
-                                                                        <h3 className="
-                                                                    text-emerald-400
-                                                                    text-2xl
-                                                                    font-bold
-                                                                    mb-4
-                                                                ">
-                                                                            Key Insights
-                                                                        </h3>
-
-                                                                        <ul className="
-                                                                    list-disc
-                                                                    pl-6
-                                                                    space-y-3
-                                                                    mb-8
-                                                                ">
-
-                                                                            {
-                                                                                summary.insights?.map(
-
-                                                                                    (item, index) => (
-
-                                                                                        <li key={index}>
-                                                                                            {item}
-                                                                                        </li>
-                                                                                    )
-                                                                                )
-                                                                            }
-
-                                                                        </ul>
-
-                                                                        <h3 className="
-                                                                    text-pink-400
-                                                                    text-2xl
-                                                                    font-bold
-                                                                    mb-4
-                                                                ">
-                                                                            Suggested Title
-                                                                        </h3>
-
-                                                                        <p className="
-                                                                    text-xl
-                                                                    font-semibold
-                                                                ">
-                                                                            {summary.title}
-                                                                        </p>
-
-                                                                    </div>
-                                                                )
-                                                            )
-                                                }
-
-                                            </div>
-                                        )
-                                    }
-
-                                </div>
-
-                            </div>
-                        )
-                    }
-
-                </div>
-            );
+                if (res.ok) { toast('Saved ✓'); await loadNotes() }
+            } catch (e) { console.error(e) }
         }
 
-        function AIAssistant() {
-
-            const [question, setQuestion] = useState("");
-
-            const [messages, setMessages] = useState([]);
-
-            const [loading, setLoading] = useState(false);
-
-            async function askAI() {
-
-                if (!question.trim()) return;
-
-                const userMessage = {
-                    type: "user",
-                    text: question
-                };
-
-                setMessages(prev => [...prev, userMessage]);
-
-                setLoading(true);
-
-                try {
-
-                    const response = await fetchWithAuth(
-                        `${API_BASE_URL}/api/ai/chat/`,
-                        {
-                            method: 'POST',
-
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-
-                            body: JSON.stringify({
-                                question
-                            })
-                        }
-                    );
-
-                    const data = await response.json();
-
-                    const aiMessage = {
-                        type: "ai",
-                        text: data.answer
-                    };
-
-                    setMessages(prev => [...prev, aiMessage]);
-
-                    setQuestion("");
-
-                    setLoading(false);
-
-                } catch (error) {
-
-                    console.log(error);
-
-                    setLoading(false);
-                }
-            }
-
-            return (
-
-                <div className="
-            mt-8
-            bg-slate-900
-            border
-            border-slate-800
-            rounded-3xl
-            p-8
-            h-[80vh]
-            flex
-            flex-col
-        ">
-
-                    <h2 className="
-                text-4xl
-                font-bold
-                mb-8
-            ">
-                        AI Notes Assistant
-                    </h2>
-
-                    <div className="
-                flex-1
-                overflow-y-auto
-                space-y-6
-                mb-6
-            ">
-
-                        {messages.map((msg, index) => (
-
-                            <div
-                                key={index}
-
-                                className={`
-                            p-5
-                            rounded-2xl
-                            max-w-[80%]
-                            leading-8
-                            text-lg
-
-                            ${msg.type === 'user'
-                                        ? 'bg-blue-600 ml-auto'
-                                        : 'bg-slate-800'}
-                        `}
-                            >
-
-                                {msg.text}
-
-                            </div>
-
-                        ))}
-
-                        {
-
-                            loading && (
-
-                                <div className="
-                            bg-slate-800
-                            p-5
-                            rounded-2xl
-                            w-fit
-                        ">
-                                    AI is thinking...
-                                </div>
-                            )
-                        }
-
-                    </div>
-
-                    <div className="
-                flex
-                gap-4
-            ">
-
-                        <input
-                            value={question}
-
-                            onChange={(e) =>
-                                setQuestion(e.target.value)
-                            }
-
-                            placeholder="
-                    Ask anything about your notes...
-                    "
-
-                            className="
-                        flex-1
-                        bg-slate-800
-                        rounded-2xl
-                        p-5
-                        outline-none
-                        text-white
-                        text-lg
-                    "
-                        />
-
-                        <button
-                            onClick={askAI}
-
-                            className="
-                        bg-blue-600
-                        hover:bg-blue-500
-                        transition
-                        px-8
-                        rounded-2xl
-                        font-bold
-                    "
-                        >
-                            Send
-                        </button>
-
-                    </div>
-
-                </div>
-            );
+        async function deleteNote() {
+            if (!selectedNote || !confirm('Delete this note?')) return;
+            await deleteNoteById(selectedNote.id);
+            closeNoteDetail();
         }
 
-        function App() {
-
-            const [currentNote, setCurrentNote] = useState("")
-
-            const [isLoggedIn, setIsLoggedIn] = useState(
-
-                !!localStorage.getItem("token")
-            )
-
-            const token = localStorage.getItem("token")
-
-            const [activeSection, setActiveSection] = useState(
-
-                localStorage.getItem("activeSection") || "dashboard"
-            )
-
-            useEffect(() => {
-
-                localStorage.setItem(
-                    "activeSection",
-                    activeSection
-                )
-
-            }, [activeSection])
-
-            function changeSection(section) {
-
-                setActiveSection(section)
-
-                localStorage.setItem(
-                    "activeSection",
-                    section
-                )
-            }
-
-            if (!isLoggedIn || !token) {
-
-                return (
-
-                    <AuthPage
-                        setIsLoggedIn={setIsLoggedIn}
-                    />
-                )
-            }
-
-            return (
-
-                <div className="
-            flex
-            h-screen
-            text-white
-        ">
-
-                    <div className="
-                w-72
-                bg-slate-900
-                p-6
-                border-r
-                border-slate-800
-                flex
-                flex-col
-                gap-5
-            ">
-
-                        <h1 className="
-                    text-5xl
-                    font-black
-                    text-blue-500
-                    mb-8
-                ">
-                            Notiyalo
-                        </h1>
-
-                        <button
-
-                            onClick={() =>
-                                changeSection("dashboard")
-                            }
-
-                            className={`
-                        p-5
-                        rounded-2xl
-                        text-left
-                        font-semibold
-                        text-xl
-                        transition
-
-                        ${activeSection === "dashboard"
-
-                                    ? "bg-blue-600"
-
-                                    : "bg-slate-800 hover:bg-slate-700"
-                                }
-                    `}
-                        >
-                            Dashboard
-                        </button>
-
-                        <button
-
-                            onClick={() =>
-                                changeSection("notes")
-                            }
-
-                            className={`
-                        p-5
-                        rounded-2xl
-                        text-left
-                        font-semibold
-                        text-xl
-                        transition
-
-                        ${activeSection === "notes"
-
-                                    ? "bg-blue-600"
-
-                                    : "bg-slate-800 hover:bg-slate-700"
-                                }
-                    `}
-                        >
-                            Notes
-                        </button>
-
-                        <button
-
-                            onClick={() =>
-                                changeSection("ai")
-                            }
-
-                            className={`
-                        p-5
-                        rounded-2xl
-                        text-left
-                        font-semibold
-                        text-xl
-                        transition
-
-                        ${activeSection === "ai"
-
-                                    ? "bg-blue-600"
-
-                                    : "bg-slate-800 hover:bg-slate-700"
-                                }
-                    `}
-                        >
-                            AI Assistant
-                        </button>
-
-                    </div>
-
-                    <div className="
-                flex-1
-                p-10
-                overflow-y-auto
-            ">
-
-                        <Header />
-
-                        {
-
-                            activeSection === "dashboard" && (
-
-                                <Dashboard
-
-                                    currentNote={currentNote}
-
-                                    setCurrentNote={setCurrentNote}
-                                />
-                            )
-                        }
-
-                        {
-
-                            activeSection === "notes" && (
-
-                                <NotesManager />
-                            )
-                        }
-
-                        {
-
-                            activeSection === "ai" && (
-
-                                <AIAssistant />
-                            )
-                        }
-
-                    </div>
-
-                </div>
-            )
+        async function deleteNoteById(id) {
+            try {
+                await fetch(`${API}/api/notes/${id}/`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+                toast('Note deleted', '');
+                await loadNotes();
+            } catch (e) { toast('Error deleting', 'error') }
         }
 
-        ReactDOM.createRoot(
-            document.getElementById("root")
-        ).render(<App />);
+        async function saveNote() {
+            const title = document.getElementById('note-title').value.trim();
+            const content = document.getElementById('note-content').value.trim();
+            if (!content) { toast('Write something first!', 'error'); return }
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const res = await fetch(`${API}/api/notes/create/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: JSON.stringify({ title: title || 'My Note', content, tags: 'general' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                toast('Note saved ✓');
+                document.getElementById('note-title').value = '';
+                document.getElementById('note-content').value = '';
+                document.getElementById('char-count').textContent = '0 chars';
+                document.getElementById('ai-body').innerHTML = `<div class="ai-placeholder"><div class="ai-placeholder-icon">🔮</div><p>Write something to get AI insights</p></div>`;
+                await loadNotes();
+            } catch (e) { toast('Error saving note', 'error') }
+            finally { btn.disabled = false; btn.textContent = 'Save Note ✓' }
+        }
 
+        /* ─── AI ─── */
+        async function generateSummary() {
+            const content = document.getElementById('note-content').value.trim();
+            if (!content) { toast('Write something first!', 'error'); return }
+            const btn = document.getElementById('ai-gen-btn');
+            btn.disabled = true;
+            document.getElementById('ai-btn-text').innerHTML = `<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>`;
+            document.getElementById('ai-body').innerHTML = `<div style="padding:20px;display:flex;flex-direction:column;gap:10px"><div class="shimmer" style="height:14px;width:60%"></div><div class="shimmer" style="height:14px;width:90%"></div><div class="shimmer" style="height:14px;width:75%"></div></div>`;
+            try {
+                const res = await fetch(`${API}/api/ai/summary/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: JSON.stringify({ content })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                renderAISummary('ai-body', data);
+                aiRunCount++;
+                document.getElementById('stat-ai').textContent = aiRunCount;
+            } catch (e) {
+                document.getElementById('ai-body').innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">Failed to generate — try again in a moment</div>`;
+            } finally {
+                btn.disabled = false;
+                document.getElementById('ai-btn-text').textContent = '✦ Generate AI Summary';
+            }
+        }
+
+        async function generateDetailSummary() {
+            const content = document.getElementById('detail-content').value.trim();
+            if (!content) return;
+            const body = document.getElementById('detail-ai-body');
+            body.innerHTML = `<div style="padding:20px;display:flex;flex-direction:column;gap:10px"><div class="shimmer" style="height:14px;width:60%"></div><div class="shimmer" style="height:14px;width:90%"></div><div class="shimmer" style="height:14px;width:75%"></div></div>`;
+            try {
+                const res = await fetch(`${API}/api/ai/summary/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: JSON.stringify({ content })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                renderAISummary('detail-ai-body', data);
+                aiRunCount++;
+                document.getElementById('stat-ai').textContent = aiRunCount;
+            } catch (e) {
+                body.innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">Failed to analyse</div>`;
+            }
+        }
+
+        function renderAISummary(elId, data) {
+            const el = document.getElementById(elId);
+            el.innerHTML = `<div class="ai-result">
+    <div class="ai-section-label blue">✦ Summary</div>
+    <div class="ai-text">${escHtml(data.summary || '')}</div>
+    ${data.insights?.length ? `
+    <div class="ai-section-label green" style="margin-top:16px">⚡ Key Insights</div>
+    ${data.insights.map(i => `<div class="ai-insight">${escHtml(i)}</div>`).join('')}
+    `: ''}
+    ${data.title ? `
+    <div class="ai-section-label pink" style="margin-top:16px">✨ Suggested Title</div>
+    <div class="ai-suggested-title">${escHtml(data.title)}</div>
+    `: ''}
+  </div>`;
+        }
+
+        /* ─── AI CHAT ─── */
+        const chatHistory = [];
+
+        function chatKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+        }
+        function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px' }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const q = input.value.trim();
+            if (!q) return;
+            input.value = ''; input.style.height = 'auto';
+            appendMsg('user', q);
+            chatHistory.push({ role: 'user', content: q });
+            const btn = document.getElementById('send-btn');
+            btn.disabled = true;
+            appendTyping();
+            try {
+                const res = await fetch(`${API}/api/ai/chat/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: JSON.stringify({ question: q })
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                removeTyping();
+                const answer = data.answer || 'No response';
+                appendMsg('ai', answer);
+                chatHistory.push({ role: 'assistant', content: answer });
+            } catch (e) {
+                removeTyping();
+                appendMsg('ai', 'Couldn\'t reach AI right now — try again in a moment 🔌');
+            } finally { btn.disabled = false }
+        }
+
+        function appendMsg(role, text) {
+            const msgs = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            div.innerHTML = `<div class="msg-avatar">${role === 'user' ? '👤' : '✦'}</div><div class="msg-bubble">${escHtml(text)}</div>`;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        function appendTyping() {
+            const msgs = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'msg ai'; div.id = 'typing-msg';
+            div.innerHTML = `<div class="msg-avatar">✦</div><div class="msg-bubble"><div class="typing-indicator"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div></div>`;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+        function removeTyping() { const t = document.getElementById('typing-msg'); if (t) t.remove() }
+        function clearChat() {
+            document.getElementById('chat-messages').innerHTML = `<div class="msg ai"><div class="msg-avatar">✦</div><div class="msg-bubble">Chat cleared! What's up? 🌊</div></div>`;
+            chatHistory.length = 0;
+        }
+
+        /* ─── UTILS ─── */
+        function escHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function timeAgo(dateStr) {
+            if (!dateStr) return 'just now';
+            const diff = (Date.now() - new Date(dateStr)) / 1000;
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+            return Math.floor(diff / 86400) + 'd ago';
+        }
     </script>
-
 </body>
 
 </html>
