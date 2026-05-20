@@ -73,92 +73,345 @@ async function apiFetch(url, options = {}) {
 }
 
 /* ─── AUTH ─── */
+
+let otpStep = 1;
+let otpEmail = '';
+
 function switchTab(mode) {
+
     authMode = mode;
+
     document.querySelectorAll('.auth-tab').forEach((t, i) =>
         t.classList.toggle('active', i === (mode === 'login' ? 0 : 1))
     );
-    document.getElementById('email-field').style.display = mode === 'signup' ? 'block' : 'none';
-    document.getElementById('auth-submit').textContent = mode === 'login' ? 'Login →' : 'Create Account →';
+
     document.getElementById('auth-error').classList.remove('show');
+
+    otpStep = 1;
+
+    renderAuthStep();
+
+    // Show/hide signup-only fields
+    const isSignup = mode === 'signup';
+
+    document.getElementById('username-field').style.display =
+        isSignup ? 'block' : 'none';
+
+    document.getElementById('email-field').style.display =
+        isSignup ? 'block' : 'none';
+
+    document.getElementById('password-field').style.display =
+        isSignup ? 'block' : 'none';
+
+    document.getElementById('otp-email-field').style.display =
+        isSignup ? 'none' : 'block';
+}
+
+function renderAuthStep() {
+
+    const isLogin = authMode === 'login';
+
+    const step1 = document.getElementById('auth-step-1');
+    const step2 = document.getElementById('auth-step-2');
+
+    if (isLogin) {
+
+        step1.style.display =
+            otpStep === 1 ? 'block' : 'none';
+
+        step2.style.display =
+            otpStep === 2 ? 'block' : 'none';
+
+        document.getElementById('auth-submit').textContent =
+            otpStep === 1
+                ? 'Send OTP →'
+                : 'Verify & Login →';
+
+    } else {
+
+        step1.style.display = 'block';
+        step2.style.display = 'none';
+
+        document.getElementById('auth-submit').textContent =
+            'Create Account →';
+    }
 }
 
 async function handleAuth() {
-    const username = document.getElementById('auth-username').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const email = document.getElementById('auth-email').value.trim();
+
     const errEl = document.getElementById('auth-error');
     const btn = document.getElementById('auth-submit');
 
-    // ── Client-side validation ──
-    if (!username || !password) {
-        errEl.textContent = 'Please fill in all fields';
-        errEl.classList.add('show');
+    errEl.classList.remove('show');
+
+    // SIGNUP FLOW
+
+    if (authMode === 'signup') {
+
+        const username =
+            document.getElementById('auth-username').value.trim();
+
+        const email =
+            document.getElementById('auth-email').value.trim();
+
+        const password =
+            document.getElementById('auth-password').value;
+
+        if (!username || !email || !password) {
+
+            errEl.textContent =
+                'Please fill in all fields';
+
+            errEl.classList.add('show');
+
+            return;
+        }
+
+        const emailRegex =
+            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+        if (!emailRegex.test(email)) {
+
+            errEl.textContent =
+                'Please enter a valid email address';
+
+            errEl.classList.add('show');
+
+            return;
+        }
+
+        if (password.length < 8) {
+
+            errEl.textContent =
+                'Password must be at least 8 characters';
+
+            errEl.classList.add('show');
+
+            return;
+        }
+
+        if (username.length < 3) {
+
+            errEl.textContent =
+                'Username must be at least 3 characters';
+
+            errEl.classList.add('show');
+
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Please wait...';
+
+        try {
+
+            const res = await fetch(`${API}/api/auth/signup/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.token) {
+
+                saveTokens(data.token, data.refresh);
+
+                localStorage.setItem(
+                    'username',
+                    data.username || username
+                );
+
+                initApp(data.username || username);
+
+            } else {
+
+                errEl.textContent =
+                    data.error || 'Signup failed';
+
+                errEl.classList.add('show');
+            }
+
+        } catch {
+
+            errEl.textContent =
+                'Server error — try again in 30s';
+
+            errEl.classList.add('show');
+
+        } finally {
+
+            btn.disabled = false;
+            btn.textContent = 'Create Account →';
+        }
+
         return;
     }
 
-    if (authMode === 'signup') {
-        if (!email) {
-            errEl.textContent = 'Email is required to create an account';
+    // OTP LOGIN FLOW
+
+    if (otpStep === 1) {
+
+        const email =
+            document.getElementById('auth-otp-email')
+                .value
+                .trim()
+                .toLowerCase();
+
+        const emailRegex =
+            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+        if (!email || !emailRegex.test(email)) {
+
+            errEl.textContent =
+                'Please enter a valid email address';
+
             errEl.classList.add('show');
+
             return;
         }
-        // Basic email format check before even hitting the server
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-        if (!emailRegex.test(email)) {
-            errEl.textContent = 'Please enter a valid email address';
+
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+
+            const res = await fetch(
+                `${API}/api/auth/request-otp/`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                }
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+
+                otpEmail = email;
+
+                otpStep = 2;
+
+                renderAuthStep();
+
+                document.getElementById('otp-hint').textContent =
+                    `Code sent to ${email}`;
+
+            } else {
+
+                errEl.textContent =
+                    data.error || 'Failed to send OTP';
+
+                errEl.classList.add('show');
+            }
+
+        } catch {
+
+            errEl.textContent =
+                'Server error — try again in 30s';
+
             errEl.classList.add('show');
+
+        } finally {
+
+            btn.disabled = false;
+
+            renderAuthStep();
+        }
+
+    } else {
+
+        const code =
+            document.getElementById('auth-otp-code')
+                .value
+                .trim();
+
+        if (!code || code.length !== 6) {
+
+            errEl.textContent =
+                'Enter the 6-digit code from your email';
+
+            errEl.classList.add('show');
+
             return;
         }
-        if (password.length < 8) {
-            errEl.textContent = 'Password must be at least 8 characters';
+
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+
+        try {
+
+            const res = await fetch(
+                `${API}/api/auth/verify-otp/`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: otpEmail,
+                        code
+                    })
+                }
+            );
+
+            const data = await res.json();
+
+            if (res.ok && data.access) {
+
+                saveTokens(data.access, data.refresh);
+
+                localStorage.setItem(
+                    'username',
+                    data.email
+                );
+
+                initApp(data.email);
+
+            } else {
+
+                errEl.textContent =
+                    data.error || 'Invalid OTP';
+
+                errEl.classList.add('show');
+            }
+
+        } catch {
+
+            errEl.textContent =
+                'Server error — try again';
+
             errEl.classList.add('show');
-            return;
+
+        } finally {
+
+            btn.disabled = false;
+
+            btn.textContent =
+                'Verify & Login →';
         }
-        if (username.length < 3) {
-            errEl.textContent = 'Username must be at least 3 characters';
-            errEl.classList.add('show');
-            return;
-        }
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Please wait...';
-    errEl.classList.remove('show');
-
-    try {
-        const url = authMode === 'login' ? '/api/auth/login/' : '/api/auth/signup/';
-        const body = authMode === 'login'
-            ? { username, password }
-            : { username, email, password };
-
-        const res = await fetch(`${API}${url}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.token) {
-            saveTokens(data.token, data.refresh);
-            localStorage.setItem('username', data.username || username);
-            initApp(data.username || username);
-        } else {
-            errEl.textContent = data.error || 'Authentication failed';
-            errEl.classList.add('show');
-        }
-    } catch (e) {
-        errEl.textContent = 'Server error — backend may be waking up, try again in 30s';
-        errEl.classList.add('show');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = authMode === 'login' ? 'Login →' : 'Create Account →';
     }
 }
 
-document.getElementById('auth-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleAuth();
+// NEW ENTER KEY LOGIC
+
+document.addEventListener('keydown', e => {
+
+    if (
+        e.key === 'Enter' &&
+        document.getElementById('auth-screen').style.display !== 'none'
+    ) {
+        handleAuth();
+    }
 });
 
 function initApp(username) {
