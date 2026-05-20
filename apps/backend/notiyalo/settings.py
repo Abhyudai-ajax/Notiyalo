@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'notes',
     'ai',
     'accounts',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -134,3 +135,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ─── GROQ AI ───
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 
+# ─── EMAIL (Gmail SMTP) ───
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'notiyalo.app@gmail.com'
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_APP_PASSWORD', '')
+DEFAULT_FROM_EMAIL = 'Notiyalo <notiyalo.app@gmail.com>'
