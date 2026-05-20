@@ -1,5 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 import dj_database_url
 
@@ -7,16 +8,20 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'temporary-secret-key-change-in-production')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("DJANGO_SECRET_KEY environment variable is not set!")
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# In production, lock this down to your actual domains
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 CORS_ALLOWED_ORIGINS = [
     'https://notiyalo.vercel.app',
     'http://localhost:3000',
     'http://127.0.0.1:5500',
+    'http://localhost:5500',
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -66,9 +71,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'notiyalo.wsgi.application'
 
+# ─── DATABASE ───
+# On Render: set DATABASE_URL env var to your PostgreSQL connection string
+# Locally: falls back to SQLite (fine for dev only)
 db_url = os.getenv('DATABASE_URL', '').strip()
 if db_url:
-    DATABASES = {'default': dj_database_url.parse(db_url, conn_max_age=600)}
+    DATABASES = {
+        'default': dj_database_url.parse(
+            db_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 else:
     DATABASES = {
         'default': {
@@ -79,7 +93,7 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -98,16 +112,27 @@ STORAGES = {
     },
 }
 
+# ─── JWT ───
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+SIMPLE_JWT = {
+    # Access token: short lived (15 min) — frontend refreshes silently
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    # Refresh token: long lived (30 days) — stored safely
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,       # new refresh token on each refresh
+    'BLACKLIST_AFTER_ROTATION': False,   # set True after adding simplejwt blacklist app
+    'UPDATE_LAST_LOGIN': True,
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-from datetime import timedelta
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=90),
-}
+# ─── GROQ AI ───
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')

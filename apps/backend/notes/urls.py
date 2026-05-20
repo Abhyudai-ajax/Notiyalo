@@ -1,13 +1,11 @@
 from django.urls import path
-from .views import *
+from . import views
 
 urlpatterns = [
-
-    path('', get_notes),
-
-    path('create/', create_note),
-
-    path('update/<int:pk>/', update_note),
-
-    path('delete/<int:pk>/', delete_note),
+    path('', views.get_notes),                        # GET all notes
+    path('create/', views.create_note),               # POST create
+    path('update/<int:pk>/', views.update_note),      # GET/PUT/PATCH single note
+    path('delete/<int:pk>/', views.delete_note),      # DELETE (soft)
+    path('archive/<int:pk>/', views.archive_note),    # POST toggle archive
+    path('archived/', views.get_archived_notes),      # GET archived list
 ]
