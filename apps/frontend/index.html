@@ -1236,161 +1236,95 @@
             transform: none
         }
 
-        /* ─── AUTH ─── */
+        /* ─── AUTH SCREEN ─── */
         #auth-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg);
+            position: fixed; inset: 0; display: flex;
+            align-items: center; justify-content: center; z-index: 100;
         }
-
         .auth-card {
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 44px;
-            width: 100%;
-            max-width: 440px;
-            position: relative;
-            overflow: hidden;
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            padding: 40px 36px;
+            width: 100%; max-width: 420px;
+            box-shadow: 0 0 60px rgba(124,109,250,.15);
+            position: relative; z-index: 1;
         }
-
-        .auth-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
-        }
-
         .auth-logo {
-            font-family: 'Syne', sans-serif;
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: -1px;
-            background: linear-gradient(135deg, #7c6dfa, #fa6d9a, #6dfabc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg,var(--accent),var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
         }
-
-        .auth-tagline {
-            font-size: 13px;
-            color: var(--muted);
-            margin-bottom: 32px
-        }
-
+        .auth-tagline { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
         .auth-tabs {
-            display: flex;
-            background: var(--surface2);
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border)
+            display: flex; gap: 4px;
+            background: var(--surface2); border-radius: 10px;
+            padding: 4px; margin-bottom: 20px;
         }
-
         .auth-tab {
-            flex: 1;
-            padding: 9px;
-            border-radius: 9px;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            background: transparent;
-            color: var(--muted);
-            font-family: 'DM Sans', sans-serif;
-            transition: all 0.2s;
+            flex: 1; padding: 8px; border: none; background: transparent;
+            color: var(--muted); border-radius: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 500; transition: all .2s;
         }
-
         .auth-tab.active {
-            background: var(--surface);
-            color: var(--text);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3)
+            background: var(--accent); color: white;
         }
-
-        .field {
-            margin-bottom: 14px
-        }
-
-        .field label {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            color: var(--muted);
-            margin-bottom: 6px;
-            text-transform: uppercase
-        }
-
-        .field input {
-            width: 100%;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 13px 16px;
-            color: var(--text);
-            font-size: 14px;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .field input::placeholder {
-            color: var(--muted)
-        }
-
-        .field input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(124, 109, 250, 0.15)
-        }
-
-        .auth-btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 14px;
-            border: none;
-            cursor: pointer;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
-            font-family: 'Syne', sans-serif;
-            box-shadow: 0 4px 24px var(--glow);
-            transition: all 0.2s;
-            margin-top: 4px;
-        }
-
-        .auth-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 36px var(--glow)
-        }
-
-        .auth-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none
-        }
-
         .auth-error {
-            background: rgba(250, 80, 80, 0.1);
-            border: 1px solid rgba(250, 80, 80, 0.2);
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 12px;
-            color: #ff8080;
+            display: none; background: rgba(255,80,80,.1);
+            border: 1px solid rgba(255,80,80,.3); border-radius: 8px;
+            padding: 10px 14px; font-size: 13px; color: #ff8080;
             margin-bottom: 14px;
-            display: none;
         }
-
-        .auth-error.show {
-            display: block
+        .auth-error.show { display: block; }
+        .auth-success {
+            display: none; background: rgba(109,250,188,.1);
+            border: 1px solid rgba(109,250,188,.3); border-radius: 8px;
+            padding: 10px 14px; font-size: 13px; color: var(--accent3);
+            margin-bottom: 14px;
+        }
+        .auth-success.show { display: block; }
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+        .field input {
+            width: 100%; background: var(--surface2);
+            border: 1px solid var(--border); border-radius: 10px;
+            padding: 11px 14px; color: var(--text); font-size: 14px;
+            outline: none; transition: border-color .2s; box-sizing: border-box;
+        }
+        .field input:focus { border-color: var(--accent); }
+        .field-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 40px; }
+        .pw-toggle {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer; font-size: 16px; opacity: .5;
+            transition: opacity .2s; padding: 0;
+        }
+        .pw-toggle:hover { opacity: 1; }
+        .pw-strength {
+            height: 3px; border-radius: 2px; margin-top: 6px;
+            transition: background .3s, width .3s; width: 0%;
+        }
+        .auth-btn {
+            width: 100%; padding: 12px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg,var(--accent),var(--accent2));
+            color: white; font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: opacity .2s, transform .1s; margin-top: 4px;
+        }
+        .auth-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+        .auth-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        .auth-link-btn {
+            width: 100%; background: none; border: none; color: var(--muted);
+            font-size: 12px; cursor: pointer; padding: 8px; margin-top: 6px;
+            border-radius: 8px; transition: color .2s;
+        }
+        .auth-link-btn:hover:not(:disabled) { color: var(--text); }
+        .auth-link-btn:disabled { opacity: .4; cursor: not-allowed; }
+        .otp-sent-badge {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 10px 14px; font-size: 13px;
+            color: var(--accent3); margin-bottom: 16px; text-align: center;
         }
 
         /* ─── TOAST ─── */
@@ -1471,18 +1405,69 @@
         <div class="auth-card">
             <div class="auth-logo">Notiyalo</div>
             <div class="auth-tagline">✦ AI-powered notes for the modern mind</div>
+
             <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchTab('login')">Login</button>
-                <button class="auth-tab" onclick="switchTab('signup')">Sign up</button>
+                <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</button>
+                <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign up</button>
             </div>
+
             <div class="auth-error" id="auth-error"></div>
-            <div class="field"><label>Username</label><input id="auth-username" placeholder="your_username"
-                    autocomplete="username" /></div>
-            <div class="field" id="email-field" style="display:none"><label>Email</label><input id="auth-email"
-                    placeholder="you@example.com" type="email" /></div>
-            <div class="field"><label>Password</label><input id="auth-password" placeholder="••••••••"
-                    type="password" /></div>
-            <button class="auth-btn" id="auth-submit" onclick="handleAuth()">Login →</button>
+            <div class="auth-success" id="auth-success"></div>
+
+            <!-- ── SIGNUP PANEL ── -->
+            <div id="panel-signup" style="display:none">
+                <div class="field" id="field-su-username">
+                    <label>Username</label>
+                    <input id="su-username" type="text" placeholder="your_username"
+                        autocomplete="username" maxlength="150" />
+                    <div class="field-hint">Letters, numbers and underscores only</div>
+                </div>
+                <div class="field" id="field-su-email">
+                    <label>Email</label>
+                    <input id="su-email" type="email" placeholder="you@example.com"
+                        autocomplete="email" maxlength="254" />
+                </div>
+                <div class="field" id="field-su-password">
+                    <label>Password</label>
+                    <div class="pw-wrap">
+                        <input id="su-password" type="password" placeholder="Min 8 chars, letters + numbers"
+                            autocomplete="new-password" maxlength="128" />
+                        <button type="button" class="pw-toggle" onclick="togglePw('su-password',this)" tabindex="-1">👁</button>
+                    </div>
+                    <div class="pw-strength" id="su-pw-strength"></div>
+                </div>
+                <button class="auth-btn" id="btn-signup" onclick="handleSignup()">Create Account →</button>
+            </div>
+
+            <!-- ── LOGIN PANEL — STEP 1: enter email ── -->
+            <div id="panel-login-step1">
+                <div class="field">
+                    <label>Email</label>
+                    <input id="login-email" type="email" placeholder="you@example.com"
+                        autocomplete="email" maxlength="254" />
+                    <div class="field-hint">We'll send a one-time code to this address</div>
+                </div>
+                <button class="auth-btn" id="btn-send-otp" onclick="handleSendOTP()">Send Code →</button>
+            </div>
+
+            <!-- ── LOGIN PANEL — STEP 2: enter OTP ── -->
+            <div id="panel-login-step2" style="display:none">
+                <div class="otp-sent-badge" id="otp-sent-badge">
+                    📬 Code sent to <span id="otp-email-display"></span>
+                </div>
+                <div class="field">
+                    <label>6-digit code</label>
+                    <input id="login-otp" type="text" inputmode="numeric" pattern="[0-9]{6}"
+                        placeholder="000000" maxlength="6" autocomplete="one-time-code"
+                        oninput="this.value=this.value.replace(/\D/g,'')" />
+                    <div class="field-hint" id="otp-attempts-hint"></div>
+                </div>
+                <button class="auth-btn" id="btn-verify-otp" onclick="handleVerifyOTP()">Verify & Login →</button>
+                <button class="auth-link-btn" id="btn-resend-otp" onclick="handleResendOTP()" disabled>
+                    Resend code <span id="resend-timer"></span>
+                </button>
+                <button class="auth-link-btn" onclick="goBackToStep1()">← Different email</button>
+            </div>
         </div>
     </div>
 

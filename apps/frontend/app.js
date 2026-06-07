@@ -4,6 +4,12 @@
  * replacing everything from "const API = ..." to the end
  */
 
+const logger = {
+    info:  (...args) => console.info('[Notiyalo]', ...args),
+    warn:  (...args) => console.warn('[Notiyalo]', ...args),
+    error: (...args) => console.error('[Notiyalo ERROR]', ...args),
+};
+
 const API = 'https://notiyalo.onrender.com';
 let allNotes = [];
 let selectedNote = null;
@@ -72,346 +78,336 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
+class ApiError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.status = status;
+    }
+}
+
+async function apiRequest(url, options = {}) {
+    const res = await apiFetch(url, options);
+    if (!res) return null;
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const msg = data?.error || `Request failed (${res.status})`;
+        logger.error(`API error on ${url}:`, msg);
+        throw new ApiError(msg, res.status);
+    }
+
+    return data;
+}
+
 /* ─── AUTH ─── */
 
-let otpStep = 1;
-let otpEmail = '';
+let _otpEmail = '';         // email confirmed in step 1
+let _resendTimer = null;    // countdown interval handle
+const RESEND_COOLDOWN = 60; // seconds
+
+// ── Helpers ──
+
+function authError(msg) {
+    const el = document.getElementById('auth-error');
+    const ok = document.getElementById('auth-success');
+    el.textContent = msg;
+    el.classList.add('show');
+    ok.classList.remove('show');
+}
+
+function authSuccess(msg) {
+    const el = document.getElementById('auth-success');
+    const err = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.classList.add('show');
+    err.classList.remove('show');
+}
+
+function authClearMessages() {
+    document.getElementById('auth-error').classList.remove('show');
+    document.getElementById('auth-success').classList.remove('show');
+}
+
+function setAuthBtn(btnId, text, disabled) {
+    const btn = document.getElementById(btnId);
+    btn.textContent = text;
+    btn.disabled = disabled;
+}
+
+function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? '🙈' : '👁';
+}
+
+// Password strength indicator
+document.addEventListener('DOMContentLoaded', () => {
+    const pwInput = document.getElementById('su-password');
+    if (pwInput) {
+        pwInput.addEventListener('input', function () {
+            const bar = document.getElementById('su-pw-strength');
+            const v = this.value;
+            let score = 0;
+            if (v.length >= 8)                          score++;
+            if (/[A-Z]/.test(v))                        score++;
+            if (/[0-9]/.test(v))                        score++;
+            if (/[^A-Za-z0-9]/.test(v))                 score++;
+            const colors = ['#ff4040','#ff8c00','#facc15','#6dfabc'];
+            const widths  = ['25%','50%','75%','100%'];
+            bar.style.width = v.length ? widths[score - 1] || '25%' : '0%';
+            bar.style.background = v.length ? colors[score - 1] || '#ff4040' : 'transparent';
+        });
+    }
+});
+
+// ── Tab switching ──
 
 function switchTab(mode) {
+    authClearMessages();
 
-    authMode = mode;
+    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
 
-    document.querySelectorAll('.auth-tab').forEach((t, i) =>
-        t.classList.toggle('active', i === (mode === 'login' ? 0 : 1))
-    );
+    document.getElementById('panel-signup').style.display      = mode === 'signup' ? 'block' : 'none';
+    document.getElementById('panel-login-step1').style.display = mode === 'login'  ? 'block' : 'none';
+    document.getElementById('panel-login-step2').style.display = 'none';
 
-    document.getElementById('auth-error').classList.remove('show');
-
-    otpStep = 1;
-
-    renderAuthStep();
-
-    // Show/hide signup-only fields
-    const isSignup = mode === 'signup';
-
-    document.getElementById('username-field').style.display =
-        isSignup ? 'block' : 'none';
-
-    document.getElementById('email-field').style.display =
-        isSignup ? 'block' : 'none';
-
-    document.getElementById('password-field').style.display =
-        isSignup ? 'block' : 'none';
-
-    document.getElementById('otp-email-field').style.display =
-        isSignup ? 'none' : 'block';
+    // Focus the first field
+    setTimeout(() => {
+        const el = mode === 'login'
+            ? document.getElementById('login-email')
+            : document.getElementById('su-username');
+        if (el) el.focus();
+    }, 50);
 }
 
-function renderAuthStep() {
+function goBackToStep1() {
+    authClearMessages();
+    _stopResendTimer();
+    document.getElementById('panel-login-step2').style.display = 'none';
+    document.getElementById('panel-login-step1').style.display = 'block';
+    document.getElementById('login-otp').value = '';
+    document.getElementById('login-email').focus();
+}
 
-    const isLogin = authMode === 'login';
+// ── Signup ──
 
-    const step1 = document.getElementById('auth-step-1');
-    const step2 = document.getElementById('auth-step-2');
+async function handleSignup() {
+    authClearMessages();
 
-    if (isLogin) {
+    const username = document.getElementById('su-username').value.trim();
+    const email    = document.getElementById('su-email').value.trim().toLowerCase();
+    const password = document.getElementById('su-password').value;
 
-        step1.style.display =
-            otpStep === 1 ? 'block' : 'none';
+    // Frontend validation
+    if (!username || !email || !password) {
+        return authError('Please fill in all fields');
+    }
+    if (username.length < 3) {
+        return authError('Username must be at least 3 characters');
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return authError('Username: letters, numbers and underscores only');
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return authError('Please enter a valid email address');
+    }
+    if (password.length < 8) {
+        return authError('Password must be at least 8 characters');
+    }
+    if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+        return authError('Password must contain at least one letter and one number');
+    }
 
-        step2.style.display =
-            otpStep === 2 ? 'block' : 'none';
+    setAuthBtn('btn-signup', 'Creating account...', true);
 
-        document.getElementById('auth-submit').textContent =
-            otpStep === 1
-                ? 'Send OTP →'
-                : 'Verify & Login →';
+    try {
+        const res  = await fetch(`${API}/api/auth/signup/`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
 
-    } else {
-
-        step1.style.display = 'block';
-        step2.style.display = 'none';
-
-        document.getElementById('auth-submit').textContent =
-            'Create Account →';
+        if (res.ok && data.token) {
+            saveTokens(data.token, data.refresh);
+            localStorage.setItem('username', data.username || username);
+            initApp(data.username || username);
+        } else {
+            authError(data.error || 'Signup failed. Please try again.');
+        }
+    } catch {
+        authError('Could not connect to server. Please try again.');
+    } finally {
+        setAuthBtn('btn-signup', 'Create Account →', false);
     }
 }
 
-async function handleAuth() {
+// ── OTP Step 1: send code ──
 
-    const errEl = document.getElementById('auth-error');
-    const btn = document.getElementById('auth-submit');
+async function handleSendOTP() {
+    authClearMessages();
 
-    errEl.classList.remove('show');
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
 
-    // SIGNUP FLOW
-
-    if (authMode === 'signup') {
-
-        const username =
-            document.getElementById('auth-username').value.trim();
-
-        const email =
-            document.getElementById('auth-email').value.trim();
-
-        const password =
-            document.getElementById('auth-password').value;
-
-        if (!username || !email || !password) {
-
-            errEl.textContent =
-                'Please fill in all fields';
-
-            errEl.classList.add('show');
-
-            return;
-        }
-
-        const emailRegex =
-            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-        if (!emailRegex.test(email)) {
-
-            errEl.textContent =
-                'Please enter a valid email address';
-
-            errEl.classList.add('show');
-
-            return;
-        }
-
-        if (password.length < 8) {
-
-            errEl.textContent =
-                'Password must be at least 8 characters';
-
-            errEl.classList.add('show');
-
-            return;
-        }
-
-        if (username.length < 3) {
-
-            errEl.textContent =
-                'Username must be at least 3 characters';
-
-            errEl.classList.add('show');
-
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Please wait...';
-
-        try {
-
-            const res = await fetch(`${API}/api/auth/signup/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username,
-                    email,
-                    password
-                })
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.token) {
-
-                saveTokens(data.token, data.refresh);
-
-                localStorage.setItem(
-                    'username',
-                    data.username || username
-                );
-
-                initApp(data.username || username);
-
-            } else {
-
-                errEl.textContent =
-                    data.error || 'Signup failed';
-
-                errEl.classList.add('show');
-            }
-
-        } catch {
-
-            errEl.textContent =
-                'Server error — try again in 30s';
-
-            errEl.classList.add('show');
-
-        } finally {
-
-            btn.disabled = false;
-            btn.textContent = 'Create Account →';
-        }
-
-        return;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return authError('Please enter a valid email address');
     }
 
-    // OTP LOGIN FLOW
+    setAuthBtn('btn-send-otp', 'Sending...', true);
 
-    if (otpStep === 1) {
+    try {
+        const res  = await fetch(`${API}/api/auth/request-otp/`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email }),
+        });
+        const data = await res.json();
 
-        const email =
-            document.getElementById('auth-otp-email')
-                .value
-                .trim()
-                .toLowerCase();
-
-        const emailRegex =
-            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-        if (!email || !emailRegex.test(email)) {
-
-            errEl.textContent =
-                'Please enter a valid email address';
-
-            errEl.classList.add('show');
-
-            return;
+        if (res.status === 429) {
+            return authError(data.error || 'Please wait before requesting another code');
+        }
+        if (res.status === 503) {
+            return authError('Email service is temporarily unavailable. Try again in a moment.');
         }
 
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
-        try {
-
-            const res = await fetch(
-                `${API}/api/auth/request-otp/`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email })
-                }
-            );
-
-            const data = await res.json();
-
-            if (res.ok) {
-
-                otpEmail = email;
-
-                otpStep = 2;
-
-                renderAuthStep();
-
-                document.getElementById('otp-hint').textContent =
-                    `Code sent to ${email}`;
-
-            } else {
-
-                errEl.textContent =
-                    data.error || 'Failed to send OTP';
-
-                errEl.classList.add('show');
-            }
-
-        } catch {
-
-            errEl.textContent =
-                'Server error — try again in 30s';
-
-            errEl.classList.add('show');
-
-        } finally {
-
-            btn.disabled = false;
-
-            renderAuthStep();
-        }
-
-    } else {
-
-        const code =
-            document.getElementById('auth-otp-code')
-                .value
-                .trim();
-
-        if (!code || code.length !== 6) {
-
-            errEl.textContent =
-                'Enter the 6-digit code from your email';
-
-            errEl.classList.add('show');
-
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Verifying...';
-
-        try {
-
-            const res = await fetch(
-                `${API}/api/auth/verify-otp/`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: otpEmail,
-                        code
-                    })
-                }
-            );
-
-            const data = await res.json();
-
-            if (res.ok && data.access) {
-
-                saveTokens(data.access, data.refresh);
-
-                localStorage.setItem(
-                    'username',
-                    data.email
-                );
-
-                initApp(data.email);
-
-            } else {
-
-                errEl.textContent =
-                    data.error || 'Invalid OTP';
-
-                errEl.classList.add('show');
-            }
-
-        } catch {
-
-            errEl.textContent =
-                'Server error — try again';
-
-            errEl.classList.add('show');
-
-        } finally {
-
-            btn.disabled = false;
-
-            btn.textContent =
-                'Verify & Login →';
-        }
+        // Always advance to step 2 — backend never confirms if email exists
+        _otpEmail = email;
+        document.getElementById('otp-email-display').textContent = email;
+        document.getElementById('otp-attempts-hint').textContent = '';
+        document.getElementById('login-otp').value = '';
+        document.getElementById('panel-login-step1').style.display = 'none';
+        document.getElementById('panel-login-step2').style.display = 'block';
+        document.getElementById('login-otp').focus();
+        authSuccess(data.message || 'Check your inbox for the 6-digit code');
+        _startResendTimer();
+    } catch {
+        authError('Could not connect to server. Please try again.');
+    } finally {
+        setAuthBtn('btn-send-otp', 'Send Code →', false);
     }
 }
 
-// NEW ENTER KEY LOGIC
+// ── OTP Step 2: verify code ──
+
+async function handleVerifyOTP() {
+    authClearMessages();
+
+    const code = document.getElementById('login-otp').value.trim();
+
+    if (!code || !/^\d{6}$/.test(code)) {
+        return authError('Enter the 6-digit code from your email');
+    }
+
+    setAuthBtn('btn-verify-otp', 'Verifying...', true);
+
+    try {
+        const res  = await fetch(`${API}/api/auth/verify-otp/`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: _otpEmail, code }),
+        });
+        const data = await res.json();
+
+        if (res.ok && data.token) {
+            _stopResendTimer();
+            saveTokens(data.token, data.refresh);
+            localStorage.setItem('username', data.username || data.email);
+            initApp(data.username || data.email);
+        } else {
+            // Show remaining attempts hint if backend sends it
+            if (data.error && data.error.includes('attempt')) {
+                document.getElementById('otp-attempts-hint').textContent = data.error;
+                authError('Incorrect code');
+            } else {
+                authError(data.error || 'Verification failed. Request a new code.');
+            }
+            // Clear the input for retry
+            document.getElementById('login-otp').value = '';
+            document.getElementById('login-otp').focus();
+        }
+    } catch {
+        authError('Could not connect to server. Please try again.');
+    } finally {
+        setAuthBtn('btn-verify-otp', 'Verify & Login →', false);
+    }
+}
+
+// ── Resend OTP ──
+
+async function handleResendOTP() {
+    authClearMessages();
+    document.getElementById('login-otp').value = '';
+    document.getElementById('otp-attempts-hint').textContent = '';
+    _stopResendTimer();
+    setAuthBtn('btn-resend-otp', 'Sending...', true);
+
+    try {
+        const res  = await fetch(`${API}/api/auth/request-otp/`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: _otpEmail }),
+        });
+        const data = await res.json();
+
+        if (res.status === 429) {
+            authError(data.error || 'Please wait before requesting another code');
+        } else {
+            authSuccess('New code sent! Check your inbox.');
+            _startResendTimer();
+        }
+    } catch {
+        authError('Could not send. Try again in a moment.');
+    } finally {
+        document.getElementById('btn-resend-otp').textContent = 'Resend code';
+    }
+}
+
+// ── Resend countdown timer ──
+
+function _startResendTimer() {
+    let secs = RESEND_COOLDOWN;
+    const btn = document.getElementById('btn-resend-otp');
+    const timerSpan = document.getElementById('resend-timer');
+    btn.disabled = true;
+    timerSpan.textContent = `(${secs}s)`;
+    _resendTimer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+            _stopResendTimer();
+        } else {
+            timerSpan.textContent = `(${secs}s)`;
+        }
+    }, 1000);
+}
+
+function _stopResendTimer() {
+    if (_resendTimer) {
+        clearInterval(_resendTimer);
+        _resendTimer = null;
+    }
+    const btn = document.getElementById('btn-resend-otp');
+    const timerSpan = document.getElementById('resend-timer');
+    if (btn) btn.disabled = false;
+    if (timerSpan) timerSpan.textContent = '';
+}
+
+// ── Keyboard shortcuts ──
 
 document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const authScreen = document.getElementById('auth-screen');
+    if (!authScreen || authScreen.style.display === 'none') return;
 
-    if (
-        e.key === 'Enter' &&
-        document.getElementById('auth-screen').style.display !== 'none'
-    ) {
-        handleAuth();
-    }
+    const step2Visible = document.getElementById('panel-login-step2')?.style.display !== 'none';
+    const step1Visible = document.getElementById('panel-login-step1')?.style.display !== 'none';
+    const signupVisible = document.getElementById('panel-signup')?.style.display !== 'none';
+
+    if (signupVisible) handleSignup();
+    else if (step2Visible) handleVerifyOTP();
+    else if (step1Visible) handleSendOTP();
 });
 
 function initApp(username) {
@@ -425,9 +421,23 @@ function initApp(username) {
 }
 
 function logout() {
+    const refresh = localStorage.getItem('refresh');
+    // Fire-and-forget — blacklist token on backend
+    if (refresh) {
+        fetch(`${API}/api/auth/logout/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ refresh }),
+        }).catch(() => {}); // never block logout on network failure
+    }
     clearTokens();
     document.getElementById('app').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'flex';
+    // Reset to login tab
+    switchTab('login');
 }
 
 /* ─── ON PAGE LOAD ─── */
@@ -508,15 +518,23 @@ function toast(msg, type = 'success') {
 
 /* ─── NOTES ─── */
 async function loadNotes() {
+    const grid = document.getElementById('notes-grid');
+    grid.innerHTML = shimmerHTML(); // show skeleton while loading
     try {
-        const res = await apiFetch('/api/notes/');
-        if (!res) return;
-        const data = await res.json();
+        const data = await apiRequest('/api/notes/');
+        if (!data) return;
         allNotes = Array.isArray(data) ? data : [];
         renderStats();
         renderNotes(allNotes);
     } catch (e) {
-        console.error('loadNotes failed:', e);
+        logger.error('loadNotes failed:', e);
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⚠️</div>
+                <div class="empty-text">Couldn't load notes</div>
+                <div class="empty-sub">${escHtml(e.message || 'Check your connection and try again')}</div>
+                <button onclick="loadNotes()" style="margin-top:12px;padding:8px 16px;border-radius:8px;background:var(--accent);color:white;border:none;cursor:pointer">Retry</button>
+            </div>`;
     }
 }
 
@@ -588,18 +606,20 @@ function closeNoteDetail() {
 async function saveDetailNote() {
     if (!selectedNote) return;
     try {
+        const title = sanitizeInput(document.getElementById('detail-title').value);
+        const content = sanitizeInput(document.getElementById('detail-content').value);
+        
         // FIXED: was PUT to wrong URL — now PATCH to correct endpoint
-        const res = await apiFetch(`/api/notes/update/${selectedNote.id}/`, {
+        const updated = await apiRequest(`/api/notes/update/${selectedNote.id}/`, {
             method: 'PATCH',
             body: JSON.stringify({
-                title: document.getElementById('detail-title').value,
-                content: document.getElementById('detail-content').value,
+                title: title,
+                content: content,
                 tags: selectedNote.tags || 'general'
             })
         });
-        if (res && res.ok) {
+        if (updated) {
             toast('Saved ✓');
-            const updated = await res.json();
             // Update local cache without full reload
             const idx = allNotes.findIndex(n => n.id === selectedNote.id);
             if (idx !== -1) allNotes[idx] = updated;
@@ -608,7 +628,8 @@ async function saveDetailNote() {
             toast('Save failed', 'error');
         }
     } catch (e) {
-        console.error('saveDetailNote failed:', e);
+        logger.error('saveDetailNote failed:', e);
+        toast(e.message || 'Error saving note', 'error');
     }
 }
 
@@ -620,8 +641,8 @@ async function deleteNote() {
 
 async function deleteNoteById(id) {
     try {
-        const res = await apiFetch(`/api/notes/delete/${id}/`, { method: 'DELETE' });
-        if (res && res.ok) {
+        const data = await apiRequest(`/api/notes/delete/${id}/`, { method: 'DELETE' });
+        if (data) {
             toast('Note deleted');
             allNotes = allNotes.filter(n => n.id !== id);
             renderNotes(allNotes);
@@ -630,13 +651,13 @@ async function deleteNoteById(id) {
             toast('Error deleting', 'error');
         }
     } catch (e) {
-        toast('Error deleting', 'error');
+        toast(e.message || 'Error deleting', 'error');
     }
 }
 
 async function saveNote() {
-    const title = document.getElementById('note-title').value.trim();
-    const content = document.getElementById('note-content').value.trim();
+    const title = sanitizeInput(document.getElementById('note-title').value);
+    const content = sanitizeInput(document.getElementById('note-content').value);
     if (!content) { toast('Write something first!', 'error'); return; }
 
     const btn = document.getElementById('save-btn');
@@ -644,12 +665,11 @@ async function saveNote() {
     btn.textContent = 'Saving...';
 
     try {
-        const res = await apiFetch('/api/notes/create/', {
+        const newNote = await apiRequest('/api/notes/create/', {
             method: 'POST',
             body: JSON.stringify({ title: title || 'Untitled', content, tags: 'general' })
         });
-        if (!res || !res.ok) throw new Error('Failed');
-        const newNote = await res.json();
+        if (!newNote) throw new Error('Failed');
         allNotes.unshift(newNote);
         renderStats();
         toast('Note saved ✓');
@@ -658,7 +678,7 @@ async function saveNote() {
         document.getElementById('char-count').textContent = '0 chars';
         document.getElementById('ai-body').innerHTML = `<div class="ai-placeholder"><div class="ai-placeholder-icon">🔮</div><p>Write something to get AI insights</p></div>`;
     } catch (e) {
-        toast('Error saving note', 'error');
+        toast(e.message || 'Error saving note', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Save Note ✓';
@@ -676,17 +696,16 @@ async function generateSummary() {
     document.getElementById('ai-body').innerHTML = shimmerHTML();
 
     try {
-        const res = await apiFetch('/api/ai/summary/', {
+        const data = await apiRequest('/api/ai/summary/', {
             method: 'POST',
             body: JSON.stringify({ content })
         });
-        if (!res || !res.ok) throw new Error('HTTP ' + (res?.status || '?'));
-        const data = await res.json();
+        if (!data) throw new Error('Failed');
         renderAISummary('ai-body', data);
         aiRunCount++;
         document.getElementById('stat-ai').textContent = aiRunCount;
     } catch (e) {
-        document.getElementById('ai-body').innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">Failed to generate — try again in a moment</div>`;
+        document.getElementById('ai-body').innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">${escHtml(e.message || 'Failed to generate — try again in a moment')}</div>`;
     } finally {
         btn.disabled = false;
         document.getElementById('ai-btn-text').textContent = '✦ Generate AI Summary';
@@ -699,17 +718,16 @@ async function generateDetailSummary() {
     const body = document.getElementById('detail-ai-body');
     body.innerHTML = shimmerHTML();
     try {
-        const res = await apiFetch('/api/ai/summary/', {
+        const data = await apiRequest('/api/ai/summary/', {
             method: 'POST',
             body: JSON.stringify({ content })
         });
-        if (!res || !res.ok) throw new Error();
-        const data = await res.json();
+        if (!data) throw new Error();
         renderAISummary('detail-ai-body', data);
         aiRunCount++;
         document.getElementById('stat-ai').textContent = aiRunCount;
     } catch (e) {
-        body.innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">Failed to analyse</div>`;
+        body.innerHTML = `<div style="padding:20px;color:#ff8080;font-size:13px">${escHtml(e.message || 'Failed to analyse')}</div>`;
     }
 }
 
@@ -750,7 +768,7 @@ function autoResize(el) {
 
 async function sendMessage() {
     const input = document.getElementById('chat-input');
-    const q = input.value.trim();
+    const q = sanitizeInput(input.value);
     if (!q) return;
     input.value = '';
     input.style.height = 'auto';
@@ -760,19 +778,18 @@ async function sendMessage() {
     btn.disabled = true;
     appendTyping();
     try {
-        const res = await apiFetch('/api/ai/chat/', {
+        const data = await apiRequest('/api/ai/chat/', {
             method: 'POST',
             body: JSON.stringify({ question: q })
         });
-        if (!res || !res.ok) throw new Error('HTTP ' + (res?.status || '?'));
-        const data = await res.json();
+        if (!data) throw new Error('Failed');
         removeTyping();
         const answer = data.answer || 'No response';
         appendMsg('ai', answer);
         chatHistory.push({ role: 'assistant', content: answer });
     } catch (e) {
         removeTyping();
-        appendMsg('ai', "Couldn't reach AI right now — try again in a moment 🔌");
+        appendMsg('ai', e.message || "Couldn't reach AI right now — try again in a moment 🔌");
     } finally {
         btn.disabled = false;
     }
@@ -806,6 +823,15 @@ function clearChat() {
 }
 
 /* ─── UTILS ─── */
+function sanitizeInput(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .trim()
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\x00/g, '');
+}
+
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')

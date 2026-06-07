@@ -1,5 +1,29 @@
+# Environment files — NEVER commit these
 .env
-venv
-backend/venv
-__pycache__
+.env.*
+!.env.example
+
+# Python
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Django
 db.sqlite3
+staticfiles/
+
+# Node
+node_modules/
+.npmrc.local
+
+# Editors
+.vscode/
+.idea/
+*.swp

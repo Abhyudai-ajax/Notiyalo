@@ -1,0 +1,42 @@
+name: Django CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+        
+    - name: Install dependencies
+      working-directory: ./apps/backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-django
+        
+    - name: Run manage.py check
+      working-directory: ./apps/backend
+      run: |
+        python manage.py check
+        
+    - name: Check missing migrations
+      working-directory: ./apps/backend
+      run: |
+        python manage.py makemigrations --check --dry-run
+        
+    - name: Run Tests
+      working-directory: ./apps/backend
+      run: |
+        pytest

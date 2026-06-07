@@ -2,15 +2,34 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
+import sys
 import dj_database_url
 
 load_dotenv()
 
+# ─── ENVIRONMENT VALIDATION ───
+# Fail fast on startup rather than crashing mid-request in production
+_REQUIRED_ENV = {
+    'DJANGO_SECRET_KEY': 'Django secret key for cryptographic signing',
+}
+_OPTIONAL_WITH_WARNING = {
+    'GROQ_API_KEY': 'AI features (summary, chat) will not work',
+    'EMAIL_APP_PASSWORD': 'OTP email login will not work',
+}
+
+_missing_required = [k for k in _REQUIRED_ENV if not os.environ.get(k)]
+if _missing_required:
+    for k in _missing_required:
+        print(f'FATAL: Missing required env var {k} — {_REQUIRED_ENV[k]}', file=sys.stderr)
+    sys.exit(1)
+
+for k, reason in _OPTIONAL_WITH_WARNING.items():
+    if not os.environ.get(k):
+        print(f'WARNING: Missing optional env var {k} — {reason}', file=sys.stderr)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("DJANGO_SECRET_KEY environment variable is not set!")
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
@@ -33,12 +52,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'rest_framework_simplejwt',
+    'django_ratelimit',
     'notes',
     'ai',
     'accounts',
-    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -113,33 +133,98 @@ STORAGES = {
     },
 }
 
-# ─── JWT ───
+# ─── JWT / DRF ───
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    # Deny-by-default: every view requires auth unless explicitly decorated with AllowAny
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    # Global exception handler — prevents internal tracebacks leaking to clients
+    'EXCEPTION_HANDLER': 'notiyalo.error_handler.custom_exception_handler',
 }
 
 SIMPLE_JWT = {
-    # Access token: short lived (15 min) — frontend refreshes silently
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    # Refresh token: long lived (30 days) — stored safely
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': True,       # new refresh token on each refresh
-    'BLACKLIST_AFTER_ROTATION': False,   # set True after adding simplejwt blacklist app
-    'UPDATE_LAST_LOGIN': True,
+    'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS':  True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN':      True,
+    'ALGORITHM':              'HS256',
+    'AUTH_HEADER_TYPES':      ('Bearer',),
+    'SIGNING_KEY':            SECRET_KEY,
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ─── CACHING & RATE LIMITING ───
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003', 'django_ratelimit.W001']
+RATELIMIT_EXCEPTION_HANDLER = 'notiyalo.utils.ratelimit_handler'
+
+# ─── SECURITY HEADERS ───
+# Always-on (both dev and prod)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# Production-only (requires HTTPS termination by reverse proxy)
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000          # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+
+# ─── STRUCTURED LOGGING ───
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'json_prod': {
+            'format': '[{levelname}] {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose' if DEBUG else 'json_prod',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'accounts': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'accounts.audit': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'notes': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'ai': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
+
 # ─── GROQ AI ───
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 
-# ─── EMAIL (Gmail SMTP) ───
+# ─── EMAIL (Resend SMTP) ───
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'notiyalo.app@gmail.com'
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_APP_PASSWORD', '')
-DEFAULT_FROM_EMAIL = 'Notiyalo <notiyalo.app@gmail.com>'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')
+EMAIL_HOST_PASSWORD = os.getenv('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Notiyalo <onboarding@resend.dev>')
